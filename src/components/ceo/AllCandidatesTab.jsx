@@ -321,7 +321,7 @@ export default function AllCandidatesTab({ onShortlist }) {
                     <span className="hidden sm:inline">View CV</span>
                   </button>
 
-                  {candidate.status !== "shortlisted" && (
+                  {["applied", "screened"].includes(candidate.status) && (
                     <button
                       onClick={() => handleShortlist(candidate)}
                       className="flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-[#05DC7F] hover:bg-[#04c56f] text-black font-semibold rounded-lg transition text-xs"
@@ -333,7 +333,31 @@ export default function AllCandidatesTab({ onShortlist }) {
 
                   {candidate.status === "shortlisted" && (
                     <span className="px-2 py-1.5 text-xs text-[#05DC7F] font-medium">
-                      ✓ Shortlisted
+                      ⭐ Shortlisted
+                    </span>
+                  )}
+
+                  {candidate.status === "interview_scheduled" && (
+                    <span className="px-2 py-1.5 text-xs text-blue-400 font-medium">
+                      📅 Interview Scheduled
+                    </span>
+                  )}
+
+                  {["hired", "accepted"].includes(candidate.status) && (
+                    <span className="px-2 py-1.5 text-xs text-[#05DC7F] font-medium">
+                      ✓ Hired
+                    </span>
+                  )}
+
+                  {candidate.status === "rejected" && (
+                    <span className="px-2 py-1.5 text-xs text-red-400 font-medium">
+                      ✗ Rejected
+                    </span>
+                  )}
+
+                  {candidate.status === "fired" && (
+                    <span className="px-2 py-1.5 text-xs text-orange-400 font-medium">
+                      🔥 Fired
                     </span>
                   )}
                 </div>

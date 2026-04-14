@@ -363,13 +363,20 @@ export default function ShortlistedTab() {
                     <FaFileAlt size={12} />
                     <span className="hidden sm:inline">View CV</span>
                   </button>
-                  <button
-                    onClick={() => openScheduleModal(c)}
-                    className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#05DC7F] text-black rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#04c56f] transition"
-                  >
-                    <FaCalendarCheck size={12} />
-                    <span className="hidden sm:inline">Schedule</span>
-                  </button>
+                  {c.status === "interview_scheduled" ? (
+                    <span className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs text-[#05DC7F] font-medium border border-[#05DC7F]/30 rounded-lg">
+                      <FaCalendarCheck size={12} />
+                      <span className="hidden sm:inline">Scheduled ✓</span>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => openScheduleModal(c)}
+                      className="flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-[#05DC7F] text-black rounded-lg text-xs sm:text-sm font-semibold hover:bg-[#04c56f] transition"
+                    >
+                      <FaCalendarCheck size={12} />
+                      <span className="hidden sm:inline">Schedule</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

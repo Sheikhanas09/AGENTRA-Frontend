@@ -13,6 +13,7 @@ import {
   FaInfoCircle,
   FaVideo,
   FaEnvelope,
+  FaTimesCircle,
 } from "react-icons/fa";
 
 export default function Hiring() {
@@ -24,12 +25,15 @@ export default function Hiring() {
   const [hiringResult, setHiringResult] = useState(null);
   const [hiringLoading, setHiringLoading] = useState(null);
 
+  // ──── Reject states ────
+  const [rejectLoading, setRejectLoading] = useState(null);
+  const [rejectResult, setRejectResult] = useState(null);
+
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
 
   const [filterDate, setFilterDate] = useState("");
 
-  // ──── Pagination ────
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -70,6 +74,7 @@ export default function Hiring() {
     setSelectedJobId(Number(jobId));
     setShowPopup(false);
     setHiringResult(null);
+    setRejectResult(null);
     setFilterDate("");
     setCurrentPage(1);
     fetchRanked(Number(jobId));
@@ -94,6 +99,34 @@ export default function Hiring() {
       console.error(err);
     }
     setHiringLoading(null);
+  };
+
+  // ──── Reject Handler ────
+  const handleReject = async (candidate) => {
+    if (
+      !window.confirm(
+        `Kya aap ${candidate.full_name} ko reject karna chahte hain?`,
+      )
+    )
+      return;
+    setRejectLoading(candidate.application_id);
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/recruitment/reject/${candidate.application_id}`,
+        { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setRejectResult({
+          candidate_name: candidate.full_name,
+          email_sent: data.email_sent,
+        });
+        fetchRanked(selectedJobId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setRejectLoading(null);
   };
 
   const getCategoryColor = (category) => {
@@ -141,7 +174,6 @@ export default function Hiring() {
     }
   };
 
-  // ──── Filter + Pagination ────
   const filteredList = filterDate
     ? rankedList.filter((c) => c.interview_date === filterDate)
     : rankedList;
@@ -270,6 +302,23 @@ export default function Hiring() {
         </div>
       )}
 
+      {/* ──── Reject Result ──── */}
+      {rejectResult && (
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">
+          <FaTimesCircle className="text-red-400" size={20} />
+          <div>
+            <p className="text-red-400 font-semibold">
+              {rejectResult.candidate_name} rejected!
+            </p>
+            <p className="text-gray-400 text-sm">
+              {rejectResult.email_sent
+                ? "✅ Rejection email sent!"
+                : "⚠️ Rejected, but the email could not be sent."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {loading && (
         <div className="text-center text-[#05DC7F] py-10">
           Agent 4 is performing ranking...
@@ -309,6 +358,11 @@ export default function Hiring() {
                       {candidate.hired && (
                         <span className="px-2 py-0.5 rounded-full text-xs bg-[#05DC7F]/20 text-[#05DC7F] border border-[#05DC7F]/40">
                           ✓ Hired
+                        </span>
+                      )}
+                      {candidate.rejected && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/40">
+                          ✗ Rejected
                         </span>
                       )}
                     </div>
@@ -363,7 +417,8 @@ export default function Hiring() {
                     {candidate.ranking_category}
                   </span>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Details Button */}
                     <button
                       onClick={() => {
                         setSelectedCandidate(candidate);
@@ -374,10 +429,10 @@ export default function Hiring() {
                       <FaInfoCircle size={11} /> Details
                     </button>
 
+                    {/* Hire Button — Strong Hire, Hire, Consider */}
                     {!candidate.hired &&
-                      ["Strong Hire", "Hire"].includes(
-                        candidate.ranking_category,
-                      ) && (
+                      !candidate.rejected &&
+                      candidate.ranking_category !== "Reject" && (
                         <button
                           onClick={() => handleHire(candidate)}
                           disabled={hiringLoading === candidate.application_id}
@@ -389,6 +444,20 @@ export default function Hiring() {
                             : "Approve & Hire"}
                         </button>
                       )}
+
+                    {/* Reject Button — sab pe dikhega except hired/rejected */}
+                    {!candidate.hired && !candidate.rejected && (
+                      <button
+                        onClick={() => handleReject(candidate)}
+                        disabled={rejectLoading === candidate.application_id}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-red-500/40 text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+                      >
+                        <FaTimesCircle size={12} />
+                        {rejectLoading === candidate.application_id
+                          ? "Rejecting..."
+                          : "Reject"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
