@@ -357,7 +357,7 @@ export default function AllCandidatesTab({ onShortlist }) {
 
                   {candidate.status === "fired" && (
                     <span className="px-2 py-1.5 text-xs text-orange-400 font-medium">
-                      🔥 Fired
+                      Fired
                     </span>
                   )}
                 </div>

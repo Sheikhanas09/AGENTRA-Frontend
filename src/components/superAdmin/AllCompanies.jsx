@@ -100,11 +100,7 @@ export default function AllCompanies() {
 
   // ──── Yeh naya add hua ────
   const handleDelete = async (id) => {
-    if (
-      !window.confirm(
-        "Kya aap sure hain? Yeh CEO permanently delete ho jayega!",
-      )
-    )
+    if (!window.confirm("Are you sure? This CEO will be permanently deleted!"))
       return;
     try {
       await fetch(`http://127.0.0.1:8000/admin/delete-ceo/${id}`, {
@@ -195,7 +191,7 @@ export default function AllCompanies() {
               {currentCompanies.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-10 text-gray-500">
-                    Koi data nahi
+                    NO Data
                   </td>
                 </tr>
               ) : (
