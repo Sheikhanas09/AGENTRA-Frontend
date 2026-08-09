@@ -10,68 +10,14 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
+import {
+  acquireLocation,
+  geoErrorMessage,
+  distanceMeters,
+  LAST_GOOD_MAX_AGE_MS,
+} from "../../utils/geo";
 
 const API = "http://127.0.0.1:8000";
-
-// ──────────────────────────────────────────
-// GPS: sabse achhi reading pakdo
-// ──────────────────────────────────────────
-// Purana code ek hi getCurrentPosition call karta tha, aur fail hone pe
-// Islamabad ke hardcoded coords bhej deta tha — isi wajah se check-out
-// "20098m door" dikhata tha. Ab hum kuch seconds readings sunte hain aur
-// sabse behtar accuracy wali bhejte hain. Na mile to null bhejte hain
-// (jhooti location nahi).
-function getBestPosition({ timeoutMs = 9000, targetAccuracy = 30 } = {}) {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-
-    let best = null;
-    let settled = false;
-    let watchId = null;
-    let timer = null;
-
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      clearTimeout(timer);
-      resolve(best);
-    };
-
-    watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const reading = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        };
-        if (!best || reading.accuracy < best.accuracy) best = reading;
-        // ──── Itni achhi reading mil gayi ke aur wait ki zarurat nahi ────
-        if (reading.accuracy <= targetAccuracy) finish();
-      },
-      () => finish(), // permission denied / unavailable
-      { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs },
-    );
-
-    timer = setTimeout(finish, timeoutMs);
-  });
-}
-
-// ──── Haversine (office se distance dikhane ke liye) ────
-function distanceMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 // ──────────────────────────────────────────
 // Location badge (history table)
@@ -122,6 +68,10 @@ export default function EmployeeAttendance() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+
+  // ──── Aakhri kaamyaab reading + chal rahi location request ────
+  const lastGoodRef = useRef(null);
+  const locationPromiseRef = useRef(null);
 
   const authHeaders = { Authorization: `Bearer ${token}` };
   const jsonHeaders = {
@@ -276,25 +226,61 @@ export default function EmployeeAttendance() {
     }
   };
 
-  // ──── Location refresh (button) ────
+  // ──────────────────────────────────────
+  // Location acquire
+  // ──────────────────────────────────────
   const refreshLocation = useCallback(async () => {
     setLocating(true);
     setWarning("");
-    const pos = await getBestPosition();
-    setLocation(pos);
-    if (!pos) {
-      setWarning(
-        "GPS location nahi mili — browser mein location permission allow karein",
-      );
+
+    const result = await acquireLocation();
+
+    if (!result.error) {
+      lastGoodRef.current = result;
+      setLocation(result);
+      setLocating(false);
+      return result;
     }
+
+    // ──── Fresh reading nahi mili — haal hi ki reading zaya mat karo ────
+    const cached = lastGoodRef.current;
+    if (cached && Date.now() - cached.at < LAST_GOOD_MAX_AGE_MS) {
+      const ageSec = Math.round((Date.now() - cached.at) / 1000);
+      setWarning(
+        `Nayi location nahi mili — ${ageSec}s purani reading use kar rahe hain`,
+      );
+      setLocating(false);
+      return cached;
+    }
+
+    setLocation(null);
+    setWarning(geoErrorMessage(result.error));
     setLocating(false);
-    return pos;
+    return null;
   }, []);
+
+  // ──── Location pehle se lena shuru kar do ────
+  // Camera khulte hi GPS lock lagna shuru ho jaye — banda photo ke liye
+  // taiyaar hota hai us 3-5 second mein reading ready ho jaati hai
+  const primeLocation = useCallback(() => {
+    locationPromiseRef.current = refreshLocation();
+    return locationPromiseRef.current;
+  }, [refreshLocation]);
+
+  // ──── Submit ke waqt: primed reading agar bohot purani ho to dobara lo ────
+  const getCoordsForSubmit = useCallback(
+    async (maxAgeMs = 90000) => {
+      const primed = await (locationPromiseRef.current || primeLocation());
+      if (primed && Date.now() - primed.at <= maxAgeMs) return primed;
+      return primeLocation();
+    },
+    [primeLocation],
+  );
 
   useEffect(() => {
     // ──── Page khulte hi background mein location le lo ────
-    refreshLocation();
-  }, [refreshLocation]);
+    primeLocation();
+  }, [primeLocation]);
 
   // ══════════════════════════════════════
   // Face enrollment (auto, pehli dafa)
@@ -359,6 +345,10 @@ export default function EmployeeAttendance() {
     setCameraAction(action);
     setError("");
     setMessage("");
+
+    // ──── GPS abhi se lagna shuru — photo tak reading ready ho jayegi ────
+    primeLocation();
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user" },
@@ -416,7 +406,8 @@ export default function EmployeeAttendance() {
     setMessage("");
 
     try {
-      const coords = await refreshLocation();
+      // ──── Camera khulte waqt jo request chali thi wahi use karo ────
+      const coords = await getCoordsForSubmit();
       setLoadingText("Check-in ho raha hai...");
 
       const res = await fetch(`${API}/attendance/check-in`, {
@@ -461,7 +452,8 @@ export default function EmployeeAttendance() {
     setMessage("");
 
     try {
-      const coords = await refreshLocation();
+      // ──── Camera khulte waqt jo request chali thi wahi use karo ────
+      const coords = await getCoordsForSubmit();
       setLoadingText("Check-out ho raha hai...");
 
       const res = await fetch(`${API}/attendance/check-out`, {
@@ -720,15 +712,29 @@ export default function EmployeeAttendance() {
         <div className="flex flex-col items-center gap-1">
           <div className="text-gray-400 text-sm flex items-center gap-2">
             <MapPin size={14} />
-            {locating
-              ? "Location le rahe hain..."
-              : location
-                ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)} (±${Math.round(location.accuracy)}m)`
-                : "Location not available"}
+            {locating ? (
+              "Location le rahe hain..."
+            ) : location ? (
+              <span>
+                {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                <span className="text-gray-500">
+                  {" "}
+                  (±{Math.round(location.accuracy)}m
+                  {location.source === "gps"
+                    ? ""
+                    : location.source === "network"
+                      ? ", WiFi"
+                      : ", cached"}
+                  )
+                </span>
+              </span>
+            ) : (
+              <span className="text-yellow-400">Location not available</span>
+            )}
             <button
-              onClick={refreshLocation}
+              onClick={primeLocation}
               disabled={locating}
-              title="Location refresh karo"
+              title="Location dobara lo"
               className="text-[#05DC7F] hover:text-white transition disabled:opacity-40"
             >
               <RefreshCw size={13} className={locating ? "animate-spin" : ""} />
