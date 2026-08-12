@@ -34,7 +34,10 @@ export default function Login() {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("full_name", data.full_name);
-      localStorage.setItem("user_id", data.user_id); // ← ADD
+      localStorage.setItem("user_id", data.user_id);
+      if (data.department) localStorage.setItem("department", data.department);
+      if (data.company_name)
+        localStorage.setItem("company_name", data.company_name);
 
       if (data.role === "superadmin") navigate("/admin/dashboard");
       else if (data.role === "ceo") navigate("/ceo/dashboard");

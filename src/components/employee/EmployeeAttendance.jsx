@@ -9,7 +9,16 @@ import {
   Camera,
   AlertTriangle,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
+import {
+  Panel,
+  IconButton,
+  Pill,
+  Pagination,
+  EmptyState,
+} from "../ui/kit";
+import { formatMinutes } from "../../utils/time";
 import {
   acquireLocation,
   geoErrorMessage,
@@ -18,6 +27,17 @@ import {
 } from "../../utils/geo";
 
 const API = "http://127.0.0.1:8000";
+
+// Work date ko parhne layak banao (UTC parse se bachte hue)
+const prettyWorkDate = (d) => {
+  if (!d) return "—";
+  const [y, m, day] = String(d).slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, day).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 // ──────────────────────────────────────────
 // Location badge (history table)
@@ -58,6 +78,362 @@ function LocationBadge({ lat, lng, verified, distance, note }) {
     >
       📍 {label}
     </a>
+  );
+}
+
+// ──────────────────────────────────────────
+// Meri Work Policy — employee ko poora qanoon
+// ──────────────────────────────────────────
+// Pehle yeh sab sirf CEO ke Settings mein tha. Employee ko na break ka
+// waqt pata tha, na yeh ke kitna pehle check-in ho sakta hai, na overtime
+// kab shuru hoti hai.
+//
+// In saari cheezon mein ek baat mushtarak hai: sab WAQT ke baare mein
+// hain, aur ek dusre se juri hui hain. Adad ki list ("late tolerance
+// 15 min", "grace 30 min") parh kar banda khud din jorta hai. Is liye
+// asal din ki LAKEER banai hai — sab kuch ek nazar mein.
+//
+// Lakeer ka mehwar ghari ka waqt nahi, "shift shuru hone se kitne
+// minute" hai — is se raat ki shift (22:00–05:00) bhi bina kisi alag
+// branch ke theek baith jati hai.
+
+const toMin = (hhmm) => {
+  if (!hhmm) return null;
+  const [h, m] = String(hhmm).split(":").map(Number);
+  return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+};
+
+const to12h = (hhmm) => {
+  const t = toMin(hhmm);
+  if (t === null) return "—";
+  const h = Math.floor(t / 60) % 24;
+  const m = t % 60;
+  const suffix = h < 12 ? "AM" : "PM";
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${suffix}`;
+};
+
+const asHours = (mins) => {
+  if (mins == null) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h}h ${m}m` : `${h} ghante`;
+};
+
+function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
+  const [open, setOpen] = useState(true);
+  if (!policy) return null;
+
+  const start = toMin(policy.shift_start);
+  const end = toMin(policy.shift_end);
+  if (start === null || end === null) return null;
+
+  // Sab kuch shift start se aage ginte hain — aadhi raat paar karna
+  // khud hi sambhal jata hai
+  const rel = (hhmm) => {
+    const t = toMin(hhmm);
+    return t === null ? null : (t - start + 1440) % 1440;
+  };
+
+  const shiftLen = policy.shift_length_minutes || (end - start + 1440) % 1440;
+  const opensRel = policy.enforce_shift_window
+    ? -(policy.early_checkin_grace_mins || 0)
+    : null;
+
+  // Lakeer check-in khulne se shuru hoti hai aur shift end ke thora
+  // baad khatam — taake overtime wala hissa bhi nazar aaye
+  const from = opensRel === null ? 0 : opensRel;
+  const tail = Math.max(45, Math.round(shiftLen * 0.12));
+  const span = shiftLen - from + tail;
+  const pct = (r) => `${((r - from) / span) * 100}%`;
+
+  const lateRel = rel(policy.late_after);
+  const bStart = policy.break_is_fixed ? rel(policy.break_start) : null;
+  const bEnd = policy.break_is_fixed ? rel(policy.break_end) : null;
+
+  // "Abhi" ka nishan — sirf us waqt jab wo lakeer par aata ho
+  const nowRel =
+    nowMinutes === null ? null : (nowMinutes - start + 1440) % 1440;
+  const showNow =
+    isWorkingDay && nowRel !== null && nowRel >= from && nowRel <= shiftLen + tail;
+
+  // ──── Sirf wo nishaniyan jo yaqeeni tor par door hain ────
+  // Grace aur late-tolerance chhote hote hain (15–30 min), aur 9 ghante
+  // ki lakeer par woh shift start se sirf 14–28 pixel door girte hain —
+  // teen label ek dusre par charh jate. Is liye lakeer par sirf DIN KI
+  // SHAKAL hai; chhote adad kinare ke caption aur neeche wali grid mein
+  // poore saaf likhe hain.
+  const marks = [
+    { at: 0, label: to12h(policy.shift_start), cap: "Shift start" },
+    bStart !== null && bEnd !== null && bEnd > bStart && {
+      at: (bStart + bEnd) / 2,
+      label: `${to12h(policy.break_start)} – ${to12h(policy.break_end)}`,
+      cap: "Break",
+    },
+    { at: shiftLen, label: to12h(policy.shift_end), cap: "Shift end" },
+  ].filter(Boolean);
+
+  return (
+    <div className="w-full rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-white/[0.03] transition"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <Clock size={16} className="text-[#05DC7F] shrink-0" />
+          <div className="min-w-0">
+            <p className="text-white text-sm font-semibold">Meri Work Policy</p>
+            <p className="text-gray-500 text-xs truncate">
+              {to12h(policy.shift_start)} – {to12h(policy.shift_end)}
+              {policy.is_overnight && " (agle din)"} · {asHours(shiftLen)}
+              {policy.break_is_fixed &&
+                ` · break ${to12h(policy.break_start)}`}
+            </p>
+          </div>
+        </div>
+        {/* Chevron khud bata deta hai ke khulega ya band hoga —
+            "Dekhein / Chhupayein" likhne ki zarurat nahi */}
+        <ChevronDown
+          size={16}
+          className={`text-gray-500 shrink-0 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 pt-1 flex flex-col gap-5">
+          {/* ── Din ki lakeer ── */}
+          <div className="pt-3">
+            <div className="relative h-9">
+              {/* Poora track — check-in khulne se shift end ke baad tak */}
+              <div className="absolute inset-x-0 top-3 h-3 rounded-full bg-white/[0.06]" />
+
+              {/* Shift ka hissa */}
+              <div
+                className="absolute top-3 h-3 rounded-full bg-[#05DC7F]/25"
+                style={{ left: pct(0), width: `${(shiftLen / span) * 100}%` }}
+              />
+
+              {/* Grace — is waqt aana late nahi ginta */}
+              {lateRel > 0 && (
+                <div
+                  className="absolute top-3 h-3 bg-[#05DC7F]/55"
+                  style={{ left: pct(0), width: `${(lateRel / span) * 100}%` }}
+                  title={`${policy.late_tolerance_mins} min tak late nahi ginta`}
+                />
+              )}
+
+              {/* Break — track par 2px ka faasla taake alag nazar aaye */}
+              {bStart !== null && bEnd !== null && bEnd > bStart && (
+                <div
+                  className="absolute top-[10px] h-5 rounded-md bg-amber-400/25 border border-amber-400/45"
+                  style={{
+                    left: pct(bStart),
+                    width: `${((bEnd - bStart) / span) * 100}%`,
+                  }}
+                  title={`Break — ${to12h(policy.break_start)} se ${to12h(policy.break_end)}`}
+                />
+              )}
+
+              {/* Overtime zone */}
+              <div
+                className="absolute top-3 h-3 rounded-r-full bg-violet-400/20"
+                style={{ left: pct(shiftLen), right: 0 }}
+                title={`${policy.overtime_threshold} ghante ke baad overtime`}
+              />
+
+              {/* Nishaniyan */}
+              {marks.map((m) => (
+                <div
+                  key={m.cap}
+                  className="absolute top-1 flex flex-col items-center"
+                  style={{ left: pct(m.at), transform: "translateX(-50%)" }}
+                >
+                  <div
+                    className={`w-px h-7 ${
+                      m.cap === "Break" ? "bg-amber-400/70" : "bg-[#05DC7F]"
+                    }`}
+                  />
+                </div>
+              ))}
+
+              {/* Abhi kahan hain */}
+              {showNow && (
+                <div
+                  className="absolute -top-1 flex flex-col items-center z-10"
+                  style={{ left: pct(nowRel), transform: "translateX(-50%)" }}
+                  title="Abhi"
+                >
+                  <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_0_3px_rgba(0,0,0,0.6)]" />
+                  <div className="w-px h-9 bg-white/70" />
+                </div>
+              )}
+            </div>
+
+            {/* Labels — lakeer ke neeche */}
+            <div className="relative h-9 mt-1">
+              {marks.map((m, i) => (
+                <div
+                  key={m.cap}
+                  className="absolute text-center"
+                  style={{
+                    left: pct(m.at),
+                    transform:
+                      i === 0
+                        ? "translateX(-10%)"
+                        : i === marks.length - 1
+                          ? "translateX(-90%)"
+                          : "translateX(-50%)",
+                  }}
+                >
+                  <p className="text-white text-[11px] font-semibold whitespace-nowrap">
+                    {m.label}
+                  </p>
+                  <p className="text-gray-500 text-[10px] whitespace-nowrap">
+                    {m.cap}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Chhote adad jo lakeer par nahi samate — kinaron par */}
+            <div className="flex justify-between gap-3 text-[10.5px] text-gray-500 -mt-1">
+              <span>
+                {policy.enforce_shift_window
+                  ? `Check-in ${to12h(policy.checkin_opens_at)} se khulta hai`
+                  : "Check-in kabhi bhi"}
+              </span>
+              <span className="text-right">
+                {policy.overtime_threshold} ghante ke baad overtime
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[10.5px] text-gray-500 mt-2.5 pt-2.5 border-t border-white/[0.06]">
+              <span className="flex items-center gap-1.5">
+                <i className="w-2.5 h-2.5 rounded-sm bg-[#05DC7F]/55" />
+                Late nahi ({asHours(policy.late_tolerance_mins)} tak)
+              </span>
+              {policy.break_is_fixed && (
+                <span className="flex items-center gap-1.5">
+                  <i className="w-2.5 h-2.5 rounded-sm bg-amber-400/45" /> Break
+                </span>
+              )}
+              <span className="flex items-center gap-1.5">
+                <i className="w-2.5 h-2.5 rounded-sm bg-violet-400/30" /> Overtime
+              </span>
+            </div>
+          </div>
+
+          {/* ── Baqi qawaid ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-4 border-t border-white/10">
+            <PolicyFact
+              label="Break"
+              value={
+                policy.break_is_fixed
+                  ? `${to12h(policy.break_start)} – ${to12h(policy.break_end)}`
+                  : asHours(policy.break_minutes)
+              }
+              note={
+                policy.break_is_fixed
+                  ? asHours(policy.break_minutes)
+                  : "Jab chahein"
+              }
+            />
+            <PolicyFact
+              label="Break ka hisaab"
+              value={
+                policy.break_policy === "included"
+                  ? "Kaam mein ginta hai"
+                  : "Kaam se katta hai"
+              }
+              note={
+                policy.break_policy === "included"
+                  ? "Net hours kam nahi hote"
+                  : "Net hours se kam hota hai"
+              }
+            />
+            <PolicyFact
+              label="Late tolerance"
+              value={asHours(policy.late_tolerance_mins)}
+              note={
+                policy.late_after
+                  ? `${to12h(policy.late_after)} ke baad late`
+                  : null
+              }
+            />
+            <PolicyFact
+              label="Rozana kam se kam"
+              value={`${policy.min_daily_hours} ghante`}
+              note="Net — break ke baghair"
+            />
+            <PolicyFact
+              label="Overtime"
+              value={`${policy.overtime_threshold} ghante baad`}
+              note={`Zyada se zyada ${policy.max_overtime_per_day} ghante`}
+            />
+            <PolicyFact
+              label="Check-in"
+              value={
+                policy.enforce_shift_window
+                  ? `${to12h(policy.checkin_opens_at)} se`
+                  : "Kabhi bhi"
+              }
+              note={
+                policy.enforce_shift_window
+                  ? `${to12h(policy.checkin_closes_at)} tak — phir band`
+                  : "Koi pabandi nahi"
+              }
+            />
+          </div>
+
+          {/* ── Working days ── */}
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-gray-500 text-[10.5px] uppercase tracking-wider mb-2">
+              Working Days
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+                "Saturday", "Sunday"].map((d) => {
+                const on = policy.working_days?.includes(d);
+                return (
+                  <span
+                    key={d}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${
+                      on
+                        ? "bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30"
+                        : "bg-white/[0.03] text-gray-600 border border-white/[0.06]"
+                    }`}
+                  >
+                    {d.slice(0, 3)}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {policy.is_overnight && (
+            <p className="text-sky-400/90 text-xs bg-sky-500/10 border border-sky-500/25 rounded-lg px-3 py-2">
+              Raat ki shift — aap ki attendance us din ki ginti hai jis din
+              shift <b>shuru</b> hui thi, chahe check-out agle din ho.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PolicyFact({ label, value, note }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-gray-500 text-[10.5px] uppercase tracking-wider">
+        {label}
+      </p>
+      <p className="text-white text-sm font-semibold mt-0.5 truncate">{value}</p>
+      {note && <p className="text-gray-600 text-[10.5px] truncate">{note}</p>}
+    </div>
   );
 }
 
@@ -434,7 +810,7 @@ export default function EmployeeAttendance() {
       setElapsed(0);
       setMessage(
         (data.is_late
-          ? `✅ Checked in! (Late by ${data.late_by_minutes} min)`
+          ? `✅ Checked in! (Late by ${formatMinutes(data.late_by_minutes)})`
           : "✅ Checked in!") + locationResultMessage(data),
       );
       await Promise.all([fetchHistory(), fetchTodayStatus()]);
@@ -480,12 +856,12 @@ export default function EmployeeAttendance() {
       setMessage(
         `✅ Checked out! Net: ${data.net_hours}h` +
           (data.total_pause_minutes
-            ? ` | Break: ${data.total_pause_minutes}m`
+            ? ` | Break: ${formatMinutes(data.total_pause_minutes)}`
             : "") +
-          (data.is_overtime ? ` | OT: ${data.overtime_minutes}m` : "") +
-          (data.is_undertime ? ` | UT: ${data.undertime_minutes}m` : "") +
+          (data.is_overtime ? ` | OT: ${formatMinutes(data.overtime_minutes)}` : "") +
+          (data.is_undertime ? ` | UT: ${formatMinutes(data.undertime_minutes)}` : "") +
           (data.is_early_checkout
-            ? ` | Shift end se ${data.early_checkout_minutes}m pehle`
+            ? ` | Shift end se ${formatMinutes(data.early_checkout_minutes)} pehle`
             : "") +
           locationResultMessage(data),
       );
@@ -571,11 +947,19 @@ export default function EmployeeAttendance() {
   const checkinWindow = todayInfo?.checkin_window || office?.checkin_window;
   const checkinBlocked = checkinWindow?.open === false;
 
-  const statusBadge = {
-    Present: "bg-[#05DC7F]/20 text-[#05DC7F] border border-[#05DC7F]/40",
-    Late: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",
-    Absent: "bg-red-500/20 text-red-400 border border-red-500/40",
-  };
+  // ──── "Abhi" ka waqt SERVER se ────
+  // Browser ki ghari galat ho sakti hai ya timezone alag ho sakta hai.
+  // Attendance ka har faisla server ke waqt par hota hai, is liye policy
+  // lakeer ka nishan bhi wahin se aana chahiye.
+  const serverMinutes = (() => {
+    const stamp = todayInfo?.server_time || office?.server_time;
+    if (!stamp) return null;
+    const m = String(stamp).match(/(\d{1,2}):(\d{2})/);
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  })();
+
+  // Rang kit se — CEO ki screen par bhi bilkul yehi hara/peela/laal hai
+  const statusTone = { Present: "ok", Late: "warn", Absent: "bad" };
   const getRowStatus = (row) => {
     if (!row.check_in_time) return "Absent";
     if (row.is_late) return "Late";
@@ -694,6 +1078,15 @@ export default function EmployeeAttendance() {
         </div>
       )}
 
+      {/* ── Meri Work Policy ──
+          Employee ko wo sab qawaid dikhte hain jin par uski attendance
+          napi jati hai — pehle yeh sirf CEO ke Settings mein the */}
+      <WorkPolicyCard
+        policy={office?.policy}
+        nowMinutes={serverMinutes}
+        isWorkingDay={todayInfo?.is_working_day !== false}
+      />
+
       {/* ── Attendance Card ── */}
       <div className="w-full p-6 rounded-2xl border border-[#05DC7F]/25 bg-black/40 flex flex-col items-center gap-4">
         <div className="w-24 h-24 rounded-full flex items-center justify-center bg-[#05DC7F]/10">
@@ -774,6 +1167,16 @@ export default function EmployeeAttendance() {
               {todayInfo.date} ka session abhi khula hai — check-out karein
             </p>
           )}
+
+          {/* ── Raat ki shift: calendar date aur work day alag hote hain ── */}
+          {todayInfo?.is_overnight_shift &&
+            todayInfo.work_date !== todayInfo.server_date && (
+              <p className="text-sky-400 text-xs">
+                Raat ki shift — yeh attendance{" "}
+                <b>{prettyWorkDate(todayInfo.work_date)}</b> ki gini jayegi
+                (shift usi din shuru hui thi)
+              </p>
+            )}
         </div>
 
         {todayInfo?.check_in_time && (
@@ -781,12 +1184,12 @@ export default function EmployeeAttendance() {
             Check-in: {formatTime(todayInfo.check_in_time)}
             {todayInfo.is_late && (
               <span className="ml-2 text-yellow-400">
-                (Late {todayInfo.late_by_minutes}min)
+                (Late {formatMinutes(todayInfo.late_by_minutes)})
               </span>
             )}
             {todayInfo.pause_minutes_so_far > 0 && (
               <span className="ml-2 text-gray-500">
-                · Break {Math.round(todayInfo.pause_minutes_so_far)}m
+                · Break {formatMinutes(todayInfo.pause_minutes_so_far)}
               </span>
             )}
           </div>
@@ -904,23 +1307,23 @@ export default function EmployeeAttendance() {
       )}
 
       {/* ── History ── */}
-      <div className="w-full rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-white text-lg font-semibold flex items-center gap-2">
-            <CalendarDays className="text-[#05DC7F]" /> Attendance History
-          </h2>
-          <button
+      <Panel
+        title="Attendance History"
+        icon={CalendarDays}
+        actions={
+          <IconButton
+            icon={RefreshCw}
+            label="Dobara load karein"
             onClick={fetchHistory}
-            className="px-3 py-1 text-xs bg-[#05DC7F]/20 text-[#05DC7F] border border-[#05DC7F]/30 rounded-lg hover:bg-[#05DC7F]/30 transition"
-          >
-            Refresh
-          </button>
-        </div>
-
+          />
+        }
+      >
         {history.length === 0 ? (
-          <div className="text-center text-gray-400 py-6">
-            Koi record nahi hai
-          </div>
+          <EmptyState
+            icon={CalendarDays}
+            title="Abhi koi record nahi"
+            hint="Pehla check-in karte hi aap ka din yahan aa jayega."
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -982,17 +1385,17 @@ export default function EmployeeAttendance() {
                         <div className="flex gap-1 flex-wrap">
                           {item.is_late && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">
-                              Late {item.late_by_minutes}m
+                              Late {formatMinutes(item.late_by_minutes)}
                             </span>
                           )}
                           {item.is_overtime && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400">
-                              OT {item.overtime_minutes}m
+                              OT {formatMinutes(item.overtime_minutes)}
                             </span>
                           )}
                           {item.is_undertime && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400">
-                              UT {item.undertime_minutes}m
+                              UT {formatMinutes(item.undertime_minutes)}
                             </span>
                           )}
                           {item.is_early_checkout && (
@@ -1000,7 +1403,7 @@ export default function EmployeeAttendance() {
                               title="Shift end se pehle check-out"
                               className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-400"
                             >
-                              Early {item.early_checkout_minutes}m
+                              Early {formatMinutes(item.early_checkout_minutes)}
                             </span>
                           )}
                           {!item.is_late &&
@@ -1013,13 +1416,9 @@ export default function EmployeeAttendance() {
                       </td>
 
                       <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            statusBadge[getRowStatus(item)]
-                          }`}
-                        >
+                        <Pill tone={statusTone[getRowStatus(item)] || "muted"}>
                           {getRowStatus(item)}
-                        </span>
+                        </Pill>
                       </td>
                     </tr>
                   ))}
@@ -1027,32 +1426,14 @@ export default function EmployeeAttendance() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="flex justify-end items-center gap-2 mt-4 text-gray-300 text-sm">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1 hover:bg-[#05DC7F]/20 rounded disabled:opacity-50"
-                >
-                  ‹
-                </button>
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1 hover:bg-[#05DC7F]/20 rounded disabled:opacity-50"
-                >
-                  ›
-                </button>
-              </div>
-            )}
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onChange={setCurrentPage}
+            />
           </>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

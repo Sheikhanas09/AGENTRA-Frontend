@@ -1,13 +1,36 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
+// Poore system mein ek hi icon set — pehle CEO ke do tabs Font Awesome
+// use karte the aur baqi sab Lucide. FA bhare hue icons hain, Lucide
+// patli lakeer ke — dono ek saath dekhne mein saaf pata chalta tha ke
+// yeh do alag jagah se bane hain.
 import {
-  FaUsers,
-  FaUserCheck,
-  FaUserTimes,
-  FaClock,
-  FaCalendarAlt,
-  FaCamera,
-} from "react-icons/fa";
+  Users,
+  UserCheck,
+  UserX,
+  Clock,
+  Calendar,
+  Camera,
+  RefreshCw,
+  Moon,
+  CalendarOff,
+  Search,
+  TrendingUp,
+  UserRound,
+} from "lucide-react";
+import {
+  Panel,
+  IconButton,
+  StatCard,
+  Pill,
+  FilterChips,
+  Pagination,
+  EmptyState,
+  TableSkeleton,
+  LiveDot,
+  Th,
+} from "../ui/kit";
+import { formatMinutes } from "../../utils/time";
 import {
   LineChart,
   Line,
@@ -21,13 +44,17 @@ import {
 const API = "http://127.0.0.1:8000";
 
 // ──────────────────────────────────────────
-// PKT (UTC+5) ki date
+// "Aaj" ka faisla SERVER karta hai
 // ──────────────────────────────────────────
-// toISOString() UTC date deta hai — raat 12:32 AM PKT pe wo abhi
-// PICHHLA din hota hai (7:32 PM UTC). Backend PKT pe chalta hai,
-// isliye dashboard aaj ke bajaye kal ka data maang raha tha.
-const pktDateStr = (d = new Date()) =>
-  new Date(d.getTime() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+// Do wajah se:
+//  1. toISOString() UTC date deta hai — raat 12:32 AM PKT pe wo abhi
+//     PICHHLA din hota hai (7:32 PM UTC)
+//  2. Raat ki shift (22:00-05:00) mein attendance ka din SHIFT ka din hota
+//     hai, calendar ka nahi. 12 baje ke baad bhi wo pichhla din rehta hai —
+//     agli date ki attendance abhi shuru hi nahi hui hoti.
+//
+// Isliye pehli baar report_date bheja hi nahi jata: server apna work date
+// batata hai aur date picker usi se set hota hai.
 
 // ──── Poll interval — check-in/out foran nazar aaye ────
 const LIVE_REFRESH_MS = 10000;
@@ -45,22 +72,10 @@ function CustomTooltip({ active, payload, label }) {
       <p className="text-yellow-400">Late: {d.late}</p>
       <p className="text-blue-400">On Leave: {d.on_leave}</p>
       <p className="text-red-400">Absent: {d.absent}</p>
+      {d.pending > 0 && (
+        <p className="text-gray-300">Not checked in yet: {d.pending}</p>
+      )}
       {!d.is_working_day && <p className="text-gray-500 mt-1">Off day</p>}
-    </div>
-  );
-}
-
-function StatCard({ title, value, valueColor, icon, subtitle }) {
-  return (
-    <div className="flex justify-between items-center p-5 rounded-xl backdrop-blur-sm border border-[#05DC7F]/25 shadow-[0_0_8px_rgba(5,220,127,0.25)] hover:border-[#05DC7F]/45 transition-all duration-300">
-      <div>
-        <p className="text-gray-400 text-sm">{title}</p>
-        <h3 className={`text-3xl font-bold ${valueColor}`}>{value}</h3>
-        {subtitle && <p className="text-gray-500 text-xs mt-0.5">{subtitle}</p>}
-      </div>
-      <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#05DC7F]/15 border border-[#05DC7F]/40">
-        {icon}
-      </div>
     </div>
   );
 }
@@ -138,13 +153,16 @@ export default function Attendance() {
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  const [todayStr, setTodayStr] = useState(pktDateStr());
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  // Khali = "server tu bata aaj kaunsa din hai" (raat ki shift ke liye zaroori)
+  const [todayStr, setTodayStr] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [isOvernight, setIsOvernight] = useState(false);
+  const [shiftState, setShiftState] = useState(null);
   const [filter, setFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const isLive = selectedDate === todayStr;
+  const isLive = !!todayStr && selectedDate === todayStr;
 
   // ──── Chart ────
   const [activeView, setActiveView] = useState("weekly");
@@ -168,8 +186,11 @@ export default function Attendance() {
       if (!silent) setLoading(true);
       setError("");
       try {
+        // selectedDate khali ho to server apna work date istemal karega
         const res = await fetch(
-          `${API}/attendance/flags/today?report_date=${selectedDate}`,
+          `${API}/attendance/flags/today${
+            selectedDate ? `?report_date=${selectedDate}` : ""
+          }`,
           { headers: authHeaders },
         );
         const data = await res.json();
@@ -188,9 +209,20 @@ export default function Attendance() {
         setOffice(data.office || null);
         setLastUpdated(new Date());
 
-        // ──── PKT date badal gayi (raat 12 baje) to picker bhi aage karo ────
-        const nowPkt = pktDateStr();
-        if (nowPkt !== todayStr) setTodayStr(nowPkt);
+        setIsOvernight(!!data.policy?.is_overnight);
+        setShiftState(data.shift_state || null);
+
+        // ──── "Aaj" server ka work date hai ────
+        // Raat ki shift mein 12 baje ke baad bhi yeh pichhla din rehta hai,
+        // isliye kabhi bhi apni calendar date par bharosa nahi karte.
+        if (!selectedDate) {
+          setTodayStr(data.date);
+          setSelectedDate(data.date);
+        } else if (selectedDate === todayStr && data.date !== todayStr) {
+          // live view khula tha aur shift badal gayi — aage khisak jao
+          setTodayStr(data.date);
+          setSelectedDate(data.date);
+        }
 
         if (!silent) setCurrentPage(1);
       } catch {
@@ -277,7 +309,14 @@ export default function Attendance() {
   // ──────────────────────────────────────
   // Filter + pagination
   // ──────────────────────────────────────
-  const FILTERS = ["All", "Present", "Late", "Absent", "On Leave"];
+  const FILTERS = [
+    "All",
+    "Present",
+    "Late",
+    "Not Checked In",
+    "Absent",
+    "On Leave",
+  ];
 
   const filtered =
     filter === "All"
@@ -290,13 +329,89 @@ export default function Attendance() {
     currentPage * itemsPerPage,
   );
 
-  const statusBadge = {
-    Present: "bg-[#05DC7F]/20 text-[#05DC7F] border border-[#05DC7F]/40",
-    Late: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",
-    Absent: "bg-red-500/20 text-red-400 border border-red-500/40",
-    "On Leave": "bg-blue-500/20 text-blue-400 border border-blue-500/40",
-    "Off Day": "bg-gray-500/20 text-gray-400 border border-gray-500/40",
+  // Laal sirf ASAL absence ke liye — jo abhi aa sakta hai wo neutral hai.
+  // Rang ab kit ke tones se aate hain, is liye har tab mein "Present" ka
+  // hara ek jaisa hi hara hai.
+  const statusTone = {
+    Present: "ok",
+    Late: "warn",
+    Absent: "bad",
+    "On Leave": "info",
+    "Off Day": "muted",
+    "Not Checked In": "muted",
+    Upcoming: "muted",
   };
+
+  // Stat card aur filter chip dono yahi chalate hain — page reset
+  // dono jagah lazmi hai warna khali page dikh jata hai
+  const pickFilter = (f) => {
+    setFilter(f);
+    setCurrentPage(1);
+  };
+
+  // Har filter mein kitne log hain — chip par dikhane ke liye
+  const filterCounts = useMemo(() => {
+    const c = { All: employees.length };
+    for (const e of employees) {
+      c[e.attendance_status] = (c[e.attendance_status] || 0) + 1;
+    }
+    return c;
+  }, [employees]);
+
+  // Absent abhi "pakka" hai ya shift chal rahi hai?
+  const attendanceFinal = shiftState ? !!shiftState.attendance_final : true;
+  const pendingCount = summary.pending ?? 0;
+  const upcomingCount = summary.upcoming ?? 0;
+
+  // "22:00" → "10:00 PM"
+  const to12h = (hhmm) => {
+    if (!hhmm) return "";
+    const [h, m] = String(hhmm).split(":").map(Number);
+    if (Number.isNaN(h)) return hhmm;
+    const suffix = h >= 12 ? "PM" : "AM";
+    return `${((h + 11) % 12) + 1}:${String(m || 0).padStart(2, "0")} ${suffix}`;
+  };
+
+  const shiftBanner = (() => {
+    if (!shiftState) return null;
+    const { window_reason: reason, opens_at, closes_at } = shiftState;
+
+    if (reason === "too_early")
+      return {
+        icon: "🕐",
+        cls: "bg-sky-500/10 border-sky-500/30 text-sky-300",
+        title: `Shift abhi shuru nahi hui — check-in ${to12h(opens_at)} par khulega`,
+        detail:
+          "Is liye abhi koi Absent mark nahi hai. Faisla shift khatam hone par hoga.",
+      };
+
+    if (reason === "open")
+      return {
+        icon: "🟢",
+        cls: "bg-[#05DC7F]/10 border-[#05DC7F]/30 text-[#05DC7F]",
+        title: `Check-in window khula hai — ${to12h(opens_at)} se ${to12h(closes_at)}`,
+        detail: `${pendingCount} employee abhi tak nahi aaye. Window band hone tak wo Absent nahi ginay jayenge.`,
+      };
+
+    if (reason === "shift_ended")
+      return {
+        icon: "🔒",
+        cls: "bg-red-500/10 border-red-500/30 text-red-300",
+        title: "Check-in window band — is din ki attendance final hai",
+        detail: `Shift ${to12h(policy?.shift_start)} se ${to12h(policy?.shift_end)} thi. Jo nahi aaye wo ab Absent hain.`,
+      };
+
+    if (reason === "not_enforced")
+      return {
+        icon: "⚙️",
+        cls: "bg-yellow-500/10 border-yellow-500/30 text-yellow-300",
+        title: "Shift window enforce nahi ho raha",
+        detail:
+          "Employees kisi bhi waqt check-in kar sakte hain. Settings mein 'Shift window enforce karein' on karein taake Absent ka waqt tay ho.",
+      };
+
+    return null;
+  })();
 
   const formatTime = (dt) =>
     !dt
@@ -342,7 +457,7 @@ export default function Attendance() {
             <span className="text-gray-400">
               Late after{" "}
               <span className="text-white">
-                +{policy.late_tolerance_mins}m
+                +{formatMinutes(policy.late_tolerance_mins)}
               </span>
             </span>
             <span
@@ -401,227 +516,301 @@ export default function Attendance() {
         )}
       </div>
 
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* ── Shift ka status — CEO ko pata rahe ke Absent final hai ya nahi ── */}
+      {isLive && shiftState && shiftBanner && (
+        <div
+          className={`rounded-xl px-4 py-3 text-sm flex items-start gap-3 border ${shiftBanner.cls}`}
+        >
+          <span className="mt-0.5 shrink-0">{shiftBanner.icon}</span>
+          <div>
+            <p className="font-semibold">{shiftBanner.title}</p>
+            <p className="text-xs opacity-80 mt-0.5">{shiftBanner.detail}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Stats ──
+          Card ab CLICKABLE hai aur neeche wale filter se juda hua hai.
+          Pehle CEO ko "5 late" dikhta tha magar yeh dekhne ke liye ke
+          wo kaun hain, alag se filter dhoondna parta tha. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
-          title="Total Employees"
+          icon={Users}
+          label="Total"
           value={summary.total_employees ?? 0}
-          valueColor="text-white"
-          icon={<FaUsers className="text-[#05DC7F] text-xl" />}
+          sub={`${(policy?.working_days || []).length || 7} din ka hafta`}
+          onClick={() => pickFilter("All")}
+          active={filter === "All"}
         />
         <StatCard
-          title="Present"
+          icon={UserCheck}
+          label="Present"
           value={summary.present ?? 0}
-          valueColor="text-[#05DC7F]"
-          subtitle={`${summary.on_break ?? 0} on break · ${summary.checked_out ?? 0} checked out`}
-          icon={<FaUserCheck className="text-[#05DC7F] text-xl" />}
+          sub={`${summary.on_break ?? 0} break par · ${summary.checked_out ?? 0} mukammal`}
+          tone={(summary.present ?? 0) > 0 ? "ok" : "muted"}
+          onClick={() => pickFilter("Present")}
+          active={filter === "Present"}
         />
+        {/* Shift chal rahi ho to "Absent" abhi faisla nahi — us waqt
+            "Not Checked In" dikhao, warna asal Absent count */}
+        {!attendanceFinal && (pendingCount > 0 || upcomingCount > 0) ? (
+          <StatCard
+            icon={UserX}
+            label="Not in yet"
+            value={pendingCount + upcomingCount}
+            sub={
+              upcomingCount > 0 && pendingCount === 0
+                ? "Shift shuru nahi hui"
+                : "Abhi aa sakte hain"
+            }
+            onClick={() => pickFilter("Not Checked In")}
+            active={filter === "Not Checked In"}
+          />
+        ) : (
+          <StatCard
+            icon={UserX}
+            label="Absent"
+            value={summary.absent ?? 0}
+            sub={`${summary.on_leave ?? 0} approved leave par`}
+            tone={(summary.absent ?? 0) > 0 ? "bad" : "muted"}
+            onClick={() => pickFilter("Absent")}
+            active={filter === "Absent"}
+          />
+        )}
         <StatCard
-          title="Absent"
-          value={summary.absent ?? 0}
-          valueColor="text-red-500"
-          subtitle={`${summary.on_leave ?? 0} on approved leave`}
-          icon={<FaUserTimes className="text-[#05DC7F] text-xl" />}
-        />
-        <StatCard
-          title="Late Arrivals"
+          icon={Clock}
+          label="Late"
           value={summary.late ?? 0}
-          valueColor="text-yellow-400"
-          icon={<FaClock className="text-[#05DC7F] text-xl" />}
+          sub={
+            policy?.late_tolerance_mins != null
+              ? `${policy.late_tolerance_mins} min tolerance`
+              : null
+          }
+          tone={(summary.late ?? 0) > 0 ? "warn" : "muted"}
+          onClick={() => pickFilter("Late")}
+          active={filter === "Late"}
         />
       </div>
 
       {/* ── Chart ── */}
-      <div className="bg-black/30 rounded-2xl p-5 border border-[#05DC7F]/20">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-white text-xl font-semibold">
-            Attendance Overview
-          </h2>
-          <div className="flex gap-2">
-            {["weekly", "monthly"].map((v) => (
-              <button
-                key={v}
-                onClick={() => setActiveView(v)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition
-                  ${
-                    activeView === v
-                      ? "bg-[#05DC7F]/20 text-white border border-[#05DC7F]"
-                      : "text-gray-400 hover:bg-[#05DC7F]/10"
-                  }`}
-              >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
+      <Panel
+        title="Attendance Overview"
+        icon={TrendingUp}
+        actions={
+          <FilterChips
+            options={[
+              { value: "weekly", label: "Weekly" },
+              { value: "monthly", label: "Monthly" },
+            ]}
+            value={activeView}
+            onChange={setActiveView}
+          />
+        }
+      >
+        {/* Do series hain, is liye legend hamesha maujood — rang akela
+            kaafi nahi hota */}
+        <div className="flex items-center gap-4 mb-3 text-[11px] text-gray-400">
+          <span className="inline-flex items-center gap-1.5">
+            <i className="w-3 h-0.5 rounded bg-[#05DC7F]" /> Present
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <i className="w-3 h-0.5 rounded bg-rose-400" /> Absent
+          </span>
         </div>
-        <div className="w-full h-[280px]">
+
+        <div className="w-full h-[260px]">
           {chartLoading ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              Loading chart...
+            <div className="h-full flex items-end gap-2 pb-6">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 animate-pulse rounded-t bg-white/[0.06]"
+                  style={{ height: `${35 + ((i * 37) % 55)}%` }}
+                />
+              ))}
             </div>
           ) : chartData.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-gray-400">
-              Abhi koi attendance data nahi
-            </div>
+            <EmptyState
+              icon={TrendingUp}
+              title="Abhi koi attendance data nahi"
+              hint="Employees check-in karna shuru karenge to yahan rujhan dikhega."
+            />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#ffffff10"
+                  stroke="#ffffff0d"
                   vertical={false}
                 />
-                <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
-                <YAxis stroke="#9CA3AF" allowDecimals={false} fontSize={12} />
-                <Tooltip content={<CustomTooltip />} />
+                <XAxis
+                  dataKey="name"
+                  stroke="#6B7280"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="#6B7280"
+                  allowDecimals={false}
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  cursor={{ stroke: "#ffffff1a" }}
+                />
                 <Line
+                  name="Present"
                   type="monotone"
                   dataKey="present"
                   stroke="#05DC7F"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
+                  strokeWidth={2}
+                  dot={{ r: 3, strokeWidth: 0, fill: "#05DC7F" }}
+                  activeDot={{ r: 5 }}
                 />
                 <Line
+                  name="Absent"
                   type="monotone"
                   dataKey="absent"
-                  stroke="#ef4444"
+                  stroke="#fb7185"
                   strokeWidth={2}
                   strokeDasharray="4 4"
-                  dot={{ r: 3 }}
+                  dot={{ r: 3, strokeWidth: 0, fill: "#fb7185" }}
+                  activeDot={{ r: 5 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           )}
         </div>
-      </div>
+      </Panel>
 
       {/* ── Table ── */}
-      <div className="rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-white text-lg font-semibold">
-              {isLive ? "Today's Attendance" : "Attendance"}
-            </h2>
-
-            {/* ── Live indicator ── */}
-            {isLive && (
-              <span
-                title={`Har ${LIVE_REFRESH_MS / 1000} second auto refresh`}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#05DC7F]/10 border border-[#05DC7F]/30 text-[#05DC7F] text-xs"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#05DC7F] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#05DC7F]" />
-                </span>
-                Live
-              </span>
-            )}
-
-            {/* ── Date picker (ab actually kaam karta hai) ── */}
-            <div className="flex items-center gap-2 bg-black/40 border border-[#05DC7F]/30 rounded-lg px-3 py-1">
-              <FaCalendarAlt className="text-[#05DC7F] text-xs" />
+      <Panel
+        title={isLive ? "Aaj ki Attendance" : "Attendance"}
+        subtitle={
+          lastUpdated
+            ? `Updated ${lastUpdated.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}`
+            : null
+        }
+        actions={
+          <>
+            {/* Date picker — icon hi kafi hai, "Date" likhne ki zarurat nahi */}
+            <label
+              title="Kisi aur din ki attendance dekhein"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08]
+                bg-white/[0.03] px-3 py-2 cursor-pointer hover:border-white/20 transition"
+            >
+              <Calendar size={14} className="text-gray-400 shrink-0" />
               <input
                 type="date"
                 value={selectedDate}
                 max={todayStr}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-white text-sm outline-none [color-scheme:dark]"
+                className="bg-transparent text-white text-xs outline-none [color-scheme:dark] w-[105px] cursor-pointer"
               />
-            </div>
+            </label>
 
-            <button
+            <IconButton
+              icon={RefreshCw}
+              label="Dobara load karein"
+              busy={loading}
               onClick={() => fetchAttendance()}
-              className="px-3 py-1 text-xs bg-[#05DC7F]/20 text-[#05DC7F] border border-[#05DC7F]/30 rounded-lg hover:bg-[#05DC7F]/30 transition"
+            />
+          </>
+        }
+        bodyClass="pt-0"
+      >
+        {/* ── Us din ki halat — sab nishan ek jagah ── */}
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          {isLive && (
+            <LiveDot
+              live
+              label={`Live · har ${LIVE_REFRESH_MS / 1000}s`}
+            />
+          )}
+          {!isWorkingDay && (
+            <Pill tone="muted" icon={CalendarOff}>
+              Non-working day
+            </Pill>
+          )}
+          {isOvernight && isLive && (
+            <Pill
+              tone="info"
+              icon={Moon}
+              title="Raat ki shift aadhi raat paar karti hai — attendance us din ki ginti hai jis din shift SHURU hui"
             >
-              Refresh
-            </button>
+              Night shift — {selectedDate} ka din
+            </Pill>
+          )}
 
-            {lastUpdated && (
-              <span className="text-gray-500 text-xs">
-                Updated{" "}
-                {lastUpdated.toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
-              </span>
-            )}
-
-            {!isWorkingDay && (
-              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30">
-                Non-working day
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setFilter(s);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition
-                  ${
-                    filter === s
-                      ? s === "All"
-                        ? "bg-[#05DC7F] text-black"
-                        : statusBadge[s]
-                      : "text-gray-400 border border-gray-700 hover:bg-gray-800"
-                  }`}
-              >
-                {s}
-              </button>
-            ))}
+          <div className="ml-auto">
+            <FilterChips
+              options={FILTERS}
+              value={filter}
+              onChange={pickFilter}
+              counts={filterCounts}
+            />
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-400 py-10">Loading...</div>
+          <TableSkeleton rows={6} cols={5} />
         ) : employees.length === 0 ? (
-          <div className="text-center text-gray-400 py-10">
-            Is company mein koi employee nahi hai
-          </div>
+          <EmptyState
+            icon={UserRound}
+            title="Is company mein koi employee nahi"
+            hint="Create User tab se employee banayein — phir un ki attendance yahan aayegi."
+          />
         ) : filtered.length === 0 ? (
-          <div className="text-center text-gray-400 py-10">
-            "{filter}" mein koi employee nahi
-          </div>
+          <EmptyState
+            icon={Search}
+            title={`"${filter}" mein koi employee nahi`}
+            hint="Doosra filter chunein ya sab dekhne ke liye All par jayein."
+          />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-5 px-5">
               <table className="min-w-full border-collapse">
-                <thead>
-                  <tr className="text-gray-400 border-b border-gray-700 text-sm">
-                    <th className="py-3 px-4 text-left">Employee</th>
-                    <th className="py-3 px-4 text-left">Check-In</th>
-                    <th className="py-3 px-4 text-left">Check-Out</th>
-                    <th className="py-3 px-4 text-left">Net Hours</th>
-                    <th className="py-3 px-4 text-left">In Location</th>
-                    <th className="py-3 px-4 text-left">Out Location</th>
-                    <th className="py-3 px-4 text-left">Photos</th>
-                    <th className="py-3 px-4 text-left">Flags</th>
-                    <th className="py-3 px-4 text-left">Status</th>
+                {/* Header sticky hai — lambi list scroll karte waqt column
+                    ke naam nazar se ojhal nahi hote */}
+                <thead className="sticky top-0 z-10 bg-[#0b0f0d]/95 backdrop-blur">
+                  <tr className="border-b border-white/[0.08]">
+                    <Th>Employee</Th>
+                    <Th>Check-In</Th>
+                    <Th>Check-Out</Th>
+                    <Th>Net Hours</Th>
+                    <Th>In Location</Th>
+                    <Th>Out Location</Th>
+                    <Th>Photos</Th>
+                    <Th>Flags</Th>
+                    <Th>Status</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {pageRows.map((emp) => (
                     <tr
                       key={emp.employee_id}
-                      className="border-b border-gray-700 hover:bg-[#05DC7F]/5 transition"
+                      className="border-b border-white/[0.05] hover:bg-white/[0.03] transition"
                     >
                       {/* ── Employee ── */}
                       <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 rounded-full bg-[#05DC7F]/20 flex items-center justify-center text-[#05DC7F] font-semibold text-sm">
-                            {emp.employee_name?.charAt(0) || "?"}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 shrink-0 rounded-full bg-[#05DC7F]/15 border border-[#05DC7F]/25 flex items-center justify-center text-[#05DC7F] font-semibold text-xs">
+                            {emp.employee_name?.charAt(0)?.toUpperCase() || "?"}
                           </div>
-                          <div>
-                            <p className="text-white text-sm">
+                          <div className="min-w-0">
+                            <p className="text-white text-sm truncate">
                               {emp.employee_name}
                             </p>
                             {emp.department && (
-                              <p className="text-gray-500 text-xs">
+                              <p className="text-gray-500 text-xs truncate">
                                 {emp.department}
                               </p>
                             )}
@@ -689,9 +878,9 @@ export default function Attendance() {
                                 )
                               }
                               title="Check-in photo"
-                              className="px-2 py-0.5 text-xs rounded-full bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 hover:bg-[#05DC7F]/25 transition flex items-center gap-1"
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-[#05DC7F]/12 text-[#05DC7F] border border-[#05DC7F]/30 hover:brightness-125 transition"
                             >
-                              <FaCamera className="text-[10px]" /> In
+                              <Camera size={11} /> In
                             </button>
                           )}
                           {emp.has_checkout_photo && (
@@ -706,7 +895,7 @@ export default function Attendance() {
                               title="Check-out photo"
                               className="px-2 py-0.5 text-xs rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition flex items-center gap-1"
                             >
-                              <FaCamera className="text-[10px]" /> Out
+                              <Camera size={11} /> Out
                             </button>
                           )}
                           {/* ── Enrolled face — check-in photo se compare karne ke liye ── */}
@@ -719,9 +908,9 @@ export default function Attendance() {
                               )
                             }
                             title="Enrolled face photo"
-                            className="px-2 py-0.5 text-xs rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 hover:bg-purple-500/25 transition flex items-center gap-1"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold bg-violet-400/12 text-violet-400 border border-violet-400/30 hover:brightness-125 transition"
                           >
-                            <FaCamera className="text-[10px]" /> Face
+                            <Camera size={11} /> Face
                           </button>
                         </div>
                       </td>
@@ -731,30 +920,30 @@ export default function Attendance() {
                         <div className="flex gap-1 flex-wrap">
                           {emp.is_late && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                              Late {emp.late_by_minutes}m
+                              Late {formatMinutes(emp.late_by_minutes)}
                             </span>
                           )}
                           {emp.is_overtime && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                              OT {emp.overtime_minutes}m
+                              OT {formatMinutes(emp.overtime_minutes)}
                             </span>
                           )}
                           {emp.is_undertime && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-                              UT {emp.undertime_minutes}m
+                              UT {formatMinutes(emp.undertime_minutes)}
                             </span>
                           )}
                           {emp.is_early_checkout && (
                             <span
-                              title={`Shift end se ${emp.early_checkout_minutes} min pehle nikal gaya`}
+                              title={`Shift end se ${formatMinutes(emp.early_checkout_minutes)} pehle nikal gaya`}
                               className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30"
                             >
-                              Early {emp.early_checkout_minutes}m
+                              Early {formatMinutes(emp.early_checkout_minutes)}
                             </span>
                           )}
                           {emp.total_pause_minutes > 0 && (
                             <span className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-300 border border-gray-500/30">
-                              Break {emp.total_pause_minutes}m
+                              Break {formatMinutes(emp.total_pause_minutes)}
                             </span>
                           )}
                           {!emp.is_late &&
@@ -769,13 +958,12 @@ export default function Attendance() {
 
                       {/* ── Status ── */}
                       <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                            statusBadge[emp.attendance_status] || ""
-                          }`}
+                        <Pill
+                          tone={statusTone[emp.attendance_status] || "muted"}
+                          title={emp.status_note || undefined}
                         >
                           {emp.attendance_status}
-                        </span>
+                        </Pill>
                         {emp.leave_type && (
                           <p className="text-gray-500 text-[10px] mt-1 capitalize">
                             {emp.leave_type}
@@ -789,32 +977,14 @@ export default function Attendance() {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex justify-end items-center gap-2 mt-4 text-gray-300 text-sm">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="px-2 py-1 hover:bg-[#05DC7F]/20 rounded disabled:opacity-40"
-                >
-                  ‹
-                </button>
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="px-2 py-1 hover:bg-[#05DC7F]/20 rounded disabled:opacity-40"
-                >
-                  ›
-                </button>
-              </div>
-            )}
+            <Pagination
+              page={currentPage}
+              totalPages={totalPages}
+              onChange={setCurrentPage}
+            />
           </>
         )}
-      </div>
+      </Panel>
 
       {/* ── Photo Modal ── */}
       {photo && (

@@ -6,6 +6,7 @@ import Layout from "../layout/Layout";
 import DashboardTab from "./DashboardTab";
 import EmployeeAttendance from "./EmployeeAttendance";
 import EmployeeInterviewsTab from "./EmployeeInterviewsTab";
+import EmployeeLeave from "./EmployeeLeave";
 import HRChatbot from "./HrChatBot";
 
 import {
@@ -20,6 +21,21 @@ import {
 export default function EmployeeDashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
 
+  // ──── Login par localStorage mein aata hai — pehle hardcoded tha ────
+  const fullName = localStorage.getItem("full_name") || "Employee";
+  const department = localStorage.getItem("department") || "Employee";
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/login";
+  };
+
   const tabs = [
     { name: "Dashboard", icon: <FaTachometerAlt size={20} /> },
     { name: "Attendance", icon: <FaUserAlt size={20} /> },
@@ -32,6 +48,7 @@ export default function EmployeeDashboard() {
     Dashboard: <DashboardTab />,
     Attendance: <EmployeeAttendance />,
     Interviews: <EmployeeInterviewsTab />,
+    Leave: <EmployeeLeave />,
     Payroll: <div className="text-white">Payroll Module</div>,
   };
 
@@ -62,15 +79,19 @@ export default function EmployeeDashboard() {
 
             <div className="flex items-center gap-4 mt-2 md:mt-0">
               <div className="text-right">
-                <p className="text-white font-medium">Employee Name</p>
-                <p className="text-white/55 text-xs">Employee</p>
+                <p className="text-white font-medium">{fullName}</p>
+                <p className="text-white/55 text-xs">{department}</p>
               </div>
 
               <div className="w-10 h-10 rounded-full bg-[#05DC7F] text-black font-bold flex items-center justify-center shadow-[0_0_10px_rgba(5,220,127,0.4)]">
-                EN
+                {initials || "E"}
               </div>
 
-              <button className="text-[#05DC7F]/65 hover:text-white transition">
+              <button
+                onClick={handleLogout}
+                title="Logout"
+                className="text-[#05DC7F]/65 hover:text-white transition"
+              >
                 <FaSignOutAlt size={22} />
               </button>
             </div>
