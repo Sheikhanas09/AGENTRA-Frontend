@@ -549,55 +549,42 @@ export default function LeaveManagment() {
           Pending card sab se pehle aur clickable — CEO ka asal kaam
           yehi hai, aur click karte hi wahi list khul jati hai */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          icon={Hourglass}
+        <StatCard icon={Hourglass}
           label="Jawab chahiye"
           value={summary.pending ?? 0}
           sub={(summary.pending ?? 0) > 0 ? "Aap ka intezar hai" : "Sab clear"}
-          tone={(summary.pending ?? 0) > 0 ? "warn" : "muted"}
-          onClick={() => pickTab("pending")}
-          active={activeTab === "pending"}
-        />
-        <StatCard
-          icon={Bot}
+          tone={(summary.pending ?? 0) > 0 ? "warn" : "muted"} onClick={() => pickTab("pending")}
+          active={activeTab === "pending"} />
+        <StatCard icon={Bot}
           label="Khud approve"
           value={autoApproved}
           sub="Deadline guzarne par"
-          tone={autoApproved > 0 ? "ai" : "muted"}
-        />
-        <StatCard
-          icon={CalendarCheck}
+          tone={autoApproved > 0 ? "ai" : "muted"} />
+        <StatCard icon={CalendarCheck}
           label="Approved"
           value={summary.approved ?? 0}
           sub="Ab tak kul"
-          tone={(summary.approved ?? 0) > 0 ? "ok" : "muted"}
-        />
-        <StatCard
-          icon={XCircle}
+          tone={(summary.approved ?? 0) > 0 ? "ok" : "muted"} />
+        <StatCard icon={XCircle}
           label="Rejected"
           value={summary.rejected ?? 0}
           sub={`${summary.cancelled ?? 0} cancelled`}
-          tone={(summary.rejected ?? 0) > 0 ? "bad" : "muted"}
-        />
+          tone={(summary.rejected ?? 0) > 0 ? "bad" : "muted"} />
       </div>
 
       {/* ── Tabs ── */}
       <div className="flex gap-2 flex-wrap items-center">
-        <FilterChips
-          options={TABS.map((t) => ({ value: t.id, label: t.label }))}
+        <FilterChips options={TABS.map((t) => ({ value: t.id, label: t.label }))}
           value={activeTab}
           onChange={pickTab}
-          counts={{ pending: summary.pending ?? 0 }}
-        />
+          counts={{ pending: summary.pending ?? 0 }} />
 
         {activeTab === "all" && (
-          <select
-            value={statusFilter}
+          <select value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
-            }}
-            className="bg-white/[0.03] text-gray-300 border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs outline-none hover:border-white/20 transition [color-scheme:dark]"
+            }} className="bg-white/[0.03] text-gray-300 border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs outline-none hover:border-white/20 transition [color-scheme:dark]"
           >
             {["All", "pending", "approved", "rejected", "cancelled"].map((s) => (
               <option key={s} value={s}>
@@ -608,12 +595,9 @@ export default function LeaveManagment() {
         )}
 
         <div className="ml-auto">
-          <IconButton
-            icon={RefreshCw}
+          <IconButton icon={RefreshCw}
             label="Dobara load karein"
-            busy={loading}
-            onClick={fetchData}
-          />
+            busy={loading} onClick={fetchData} />
         </div>
       </div>
 
@@ -621,11 +605,8 @@ export default function LeaveManagment() {
       {activeTab === "calendar" &&
         (calendar.length === 0 ? (
           <Panel>
-            <EmptyState
-              icon={CalendarDays}
-              title="Agle 30 din mein koi approved leave nahi"
-              hint="Jo chhuttiyan approve hongi wo yahan tareekh ke hisab se dikhengi."
-            />
+            <EmptyState icon={CalendarDays} title="Agle 30 din mein koi approved leave nahi"
+              hint="Jo chhuttiyan approve hongi wo yahan tareekh ke hisab se dikhengi." />
           </Panel>
         ) : (
           <div className="rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
@@ -634,9 +615,7 @@ export default function LeaveManagment() {
             </p>
             <div className="flex flex-col gap-3">
               {calendar.map((l) => (
-                <div
-                  key={l.leave_id}
-                  className="flex justify-between items-center gap-4 p-3 rounded-xl border border-[#05DC7F]/15 bg-black/30"
+                <div key={l.leave_id} className="flex justify-between items-center gap-4 p-3 rounded-xl border border-[#05DC7F]/15 bg-black/30"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-[#05DC7F]/20 flex items-center justify-center text-[#05DC7F] font-semibold text-sm">
@@ -644,8 +623,7 @@ export default function LeaveManagment() {
                     </div>
                     <div>
                       <p className="text-white text-sm">{l.employee_name}</p>
-                      <span
-                        className={`px-2 py-0.5 text-[10px] rounded-full ${leaveTypeColor[l.leave_type] || ""}`}
+                      <span className={`px-2 py-0.5 text-[10px] rounded-full ${leaveTypeColor[l.leave_type] || ""}`}
                       >
                         {l.leave_type?.toUpperCase()}
                       </span>
@@ -673,10 +651,8 @@ export default function LeaveManagment() {
         <div className="rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center gap-3 mb-5">
             <p className="text-gray-400 text-sm">Employee chunein:</p>
-            <select
-              value={balanceEmp}
-              onChange={(e) => setBalanceEmp(e.target.value)}
-              className="bg-black/40 text-gray-300 border border-[#05DC7F]/25 rounded-lg px-3 py-2 text-sm outline-none min-w-56"
+            <select value={balanceEmp}
+              onChange={(e) => setBalanceEmp(e.target.value)} className="bg-black/40 text-gray-300 border border-[#05DC7F]/25 rounded-lg px-3 py-2 text-sm outline-none min-w-56"
             >
               <option value="">— select —</option>
               {employees.map((e) => (
@@ -695,9 +671,7 @@ export default function LeaveManagment() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {balanceRows.map((b) => (
-                <div
-                  key={b.leave_type}
-                  className="p-4 rounded-xl border border-[#05DC7F]/20 bg-black/30"
+                <div key={b.leave_type} className="p-4 rounded-xl border border-[#05DC7F]/20 bg-black/30"
                 >
                   <div className="flex justify-between items-baseline mb-1">
                     <p className="text-gray-400 text-xs uppercase tracking-wide">
@@ -718,19 +692,15 @@ export default function LeaveManagment() {
 
                   {!b.unlimited && (
                     <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={() => adjustBalance(b.leave_type, 1)}
-                        disabled={adjusting === b.leave_type}
-                        className="flex-1 py-1 rounded-lg bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 text-xs hover:bg-[#05DC7F]/25 transition disabled:opacity-40 flex items-center justify-center gap-1"
+                      <button onClick={() => adjustBalance(b.leave_type, 1)}
+                        disabled={adjusting === b.leave_type} className="flex-1 py-1 rounded-lg bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 text-xs hover:bg-[#05DC7F]/25 transition disabled:opacity-40 flex items-center justify-center gap-1"
                       >
-                        <Plus size={14}  size={9} /> 1 day
+                        <Plus size={9} /> 1 day
                       </button>
-                      <button
-                        onClick={() => adjustBalance(b.leave_type, -1)}
-                        disabled={adjusting === b.leave_type}
-                        className="flex-1 py-1 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 text-xs hover:bg-red-500/25 transition disabled:opacity-40 flex items-center justify-center gap-1"
+                      <button onClick={() => adjustBalance(b.leave_type, -1)}
+                        disabled={adjusting === b.leave_type} className="flex-1 py-1 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 text-xs hover:bg-red-500/25 transition disabled:opacity-40 flex items-center justify-center gap-1"
                       >
-                        <Minus size={14}  size={9} /> 1 day
+                        <Minus size={9} /> 1 day
                       </button>
                     </div>
                   )}
@@ -769,15 +739,12 @@ export default function LeaveManagment() {
                 </p>
               </div>
               {/* Sirf tab zaroori jab upload ke waqt agent fail ho gaya ho */}
-              <button
-                onClick={runExtraction}
-                disabled={extracting}
-                title="Upload ke waqt agent fail ho gaya ho to dobara chalayein"
-                className="shrink-0 px-3 py-1.5 rounded-lg text-purple-300/80 border border-purple-500/25 text-xs hover:bg-purple-500/15 transition disabled:opacity-50 flex items-center gap-2"
+              <button onClick={runExtraction}
+                disabled={extracting} title="Upload ke waqt agent fail ho gaya ho to dobara chalayein" className="shrink-0 px-3 py-1.5 rounded-lg text-purple-300/80 border border-purple-500/25 text-xs hover:bg-purple-500/15 transition disabled:opacity-50 flex items-center gap-2"
               >
                 {extracting ? (
                   <>
-                    <Loader2 size={14}  className="animate-spin" /> Parh raha hai...
+                    <Loader2 size={14} className="animate-spin" /> Parh raha hai...
                   </>
                 ) : (
                   "Dobara chalayein"
@@ -811,22 +778,17 @@ export default function LeaveManagment() {
 
                 <div className="flex flex-col gap-2 mb-3">
                   {(extraction.suggested || []).map((t) => (
-                    <label
-                      key={t.code}
-                      className={`flex gap-3 p-3 rounded-lg border cursor-pointer transition ${
+                    <label key={t.code} className={`flex gap-3 p-3 rounded-lg border cursor-pointer transition ${
                         picked[t.code]
                           ? "border-[#05DC7F]/40 bg-[#05DC7F]/5"
                           : "border-gray-700 bg-black/20"
                       }`}
                     >
-                      <input
-                        type="checkbox"
+                      <input type="checkbox"
                         checked={!!picked[t.code]}
                         onChange={(e) =>
                           setPicked({ ...picked, [t.code]: e.target.checked })
-                        }
-                        className="mt-1 accent-[#05DC7F] w-4 h-4 shrink-0"
-                      />
+                        } className="mt-1 accent-[#05DC7F] w-4 h-4 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-white text-sm">
                           {t.label}
@@ -840,8 +802,7 @@ export default function LeaveManagment() {
                               {t.current_entitlement} → {t.days_per_year}
                             </span>
                           ) : null}
-                          <span
-                            className={`ml-2 px-1.5 py-0.5 text-[10px] rounded ${
+                          <span className={`ml-2 px-1.5 py-0.5 text-[10px] rounded ${
                               t.confidence === "high"
                                 ? "bg-[#05DC7F]/15 text-[#05DC7F]"
                                 : "bg-orange-500/20 text-orange-400"
@@ -877,12 +838,9 @@ export default function LeaveManagment() {
 
                 {extraction.missing_from_policy?.length > 0 && (
                   <label className="flex items-start gap-2 mb-3 cursor-pointer">
-                    <input
-                      type="checkbox"
+                    <input type="checkbox"
                       checked={zeroMissing}
-                      onChange={(e) => setZeroMissing(e.target.checked)}
-                      className="mt-0.5 accent-[#05DC7F] w-4 h-4"
-                    />
+                      onChange={(e) => setZeroMissing(e.target.checked)} className="mt-0.5 accent-[#05DC7F] w-4 h-4" />
                     <span className="text-gray-400 text-xs">
                       Jo types policy mein nahi mili unki entitlement{" "}
                       <b className="text-white">0</b> kar dein —{" "}
@@ -896,16 +854,12 @@ export default function LeaveManagment() {
                 )}
 
                 <div className="flex gap-2">
-                  <button
-                    onClick={applyExtraction}
-                    disabled={applying}
-                    className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:bg-[#04c56f] transition disabled:opacity-50"
+                  <button onClick={applyExtraction}
+                    disabled={applying} className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:bg-[#04c56f] transition disabled:opacity-50"
                   >
                     {applying ? "Save ho raha hai..." : "Chuni hui types apply karein"}
                   </button>
-                  <button
-                    onClick={() => setExtraction(null)}
-                    className="px-4 py-2 rounded-xl text-gray-400 border border-gray-700 text-sm hover:bg-gray-800 transition"
+                  <button onClick={() => setExtraction(null)} className="px-4 py-2 rounded-xl text-gray-400 border border-gray-700 text-sm hover:bg-gray-800 transition"
                   >
                     Cancel
                   </button>
@@ -921,9 +875,7 @@ export default function LeaveManagment() {
               const busy = savingType === t.code;
 
               return (
-                <div
-                  key={t.code}
-                  className={`p-4 rounded-xl border ${
+                <div key={t.code} className={`p-4 rounded-xl border ${
                     d.is_enabled === false
                       ? "border-gray-800 bg-black/20 opacity-70"
                       : "border-[#05DC7F]/20 bg-black/30"
@@ -946,14 +898,11 @@ export default function LeaveManagment() {
                           </span>
                         )}
                       </p>
-                      <input
-                        type="text"
+                      <input type="text"
                         value={d.label || ""}
                         onChange={(e) =>
                           editType(t.code, { label: e.target.value })
-                        }
-                        className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
-                      />
+                        } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                       {t.policy_reference && (
                         <p className="text-gray-600 text-[10px] mt-1 italic truncate">
                           {t.policy_reference}
@@ -964,8 +913,7 @@ export default function LeaveManagment() {
                     {/* Days */}
                     <div className="w-full lg:w-28">
                       <p className="text-gray-500 text-xs mb-1">Days / year</p>
-                      <input
-                        type="number"
+                      <input type="number"
                         min="0"
                         disabled={d.is_unlimited}
                         value={d.is_unlimited ? "" : d.default_entitlement ?? 0}
@@ -974,30 +922,23 @@ export default function LeaveManagment() {
                           editType(t.code, {
                             default_entitlement: e.target.value,
                           })
-                        }
-                        className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none disabled:opacity-40"
-                      />
+                        } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none disabled:opacity-40" />
                     </div>
 
                     {/* Notice */}
                     <div className="w-full lg:w-32">
-                      <p
-                        className="text-gray-500 text-xs mb-1"
-                        title="Kitne din pehle apply karni hai. 0 = usi din bhi"
+                      <p className="text-gray-500 text-xs mb-1" title="Kitne din pehle apply karni hai. 0 = usi din bhi"
                       >
                         Notice (din)
                       </p>
-                      <input
-                        type="number"
+                      <input type="number"
                         min="0"
                         value={d.advance_notice_days ?? 0}
                         onChange={(e) =>
                           editType(t.code, {
                             advance_notice_days: e.target.value,
                           })
-                        }
-                        className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
-                      />
+                        } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                     </div>
 
                     {/* Toggles */}
@@ -1006,48 +947,36 @@ export default function LeaveManagment() {
                         ["is_unlimited", "Unlimited"],
                         ["requires_certificate", "Certificate"],
                       ].map(([key, label]) => (
-                        <label
-                          key={key}
-                          className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400"
+                        <label key={key} className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400"
                         >
-                          <input
-                            type="checkbox"
+                          <input type="checkbox"
                             checked={!!d[key]}
                             onChange={(e) =>
                               editType(t.code, { [key]: e.target.checked })
-                            }
-                            className="accent-[#05DC7F] w-3.5 h-3.5"
-                          />
+                            } className="accent-[#05DC7F] w-3.5 h-3.5" />
                           {label}
                         </label>
                       ))}
 
                       <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400">
-                        <input
-                          type="checkbox"
+                        <input type="checkbox"
                           checked={d.is_enabled !== false}
                           onChange={(e) =>
                             editType(t.code, { is_enabled: e.target.checked })
-                          }
-                          className="accent-[#05DC7F] w-3.5 h-3.5"
-                        />
+                          } className="accent-[#05DC7F] w-3.5 h-3.5" />
                         On
                       </label>
                     </div>
 
                     {/* Actions */}
                     <div className="flex gap-2 pb-0.5">
-                      <button
-                        onClick={() => saveType(t)}
-                        disabled={!dirty || busy}
-                        className="px-3 py-1.5 rounded-lg bg-[#05DC7F] text-black text-xs font-semibold hover:bg-[#04c56f] transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      <button onClick={() => saveType(t)}
+                        disabled={!dirty || busy} className="px-3 py-1.5 rounded-lg bg-[#05DC7F] text-black text-xs font-semibold hover:bg-[#04c56f] transition disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         {busy ? "..." : "Save"}
                       </button>
-                      <button
-                        onClick={() => removeType(t)}
-                        disabled={busy}
-                        className="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 text-xs hover:bg-red-500/25 transition disabled:opacity-40"
+                      <button onClick={() => removeType(t)}
+                        disabled={busy} className="px-3 py-1.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30 text-xs hover:bg-red-500/25 transition disabled:opacity-40"
                       >
                         <X size={14} />
                       </button>
@@ -1076,8 +1005,7 @@ export default function LeaveManagment() {
           {/* ── Nayi type ── */}
           <div className="mt-5">
             {!newType ? (
-              <button
-                onClick={() =>
+              <button onClick={() =>
                   setNewType({
                     code: "",
                     label: "",
@@ -1086,8 +1014,7 @@ export default function LeaveManagment() {
                     requires_certificate: false,
                     is_unlimited: false,
                   })
-                }
-                className="px-4 py-2 rounded-xl bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 text-sm hover:bg-[#05DC7F]/25 transition"
+                } className="px-4 py-2 rounded-xl bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 text-sm hover:bg-[#05DC7F]/25 transition"
               >
                 + Nayi leave type
               </button>
@@ -1101,32 +1028,25 @@ export default function LeaveManagment() {
                     <p className="text-gray-500 text-xs mb-1">
                       Code (angrezi, bina space)
                     </p>
-                    <input
-                      type="text"
+                    <input type="text"
                       value={newType.code}
                       placeholder="maternity"
                       onChange={(e) =>
                         setNewType({ ...newType, code: e.target.value })
-                      }
-                      className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
-                    />
+                      } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Name</p>
-                    <input
-                      type="text"
+                    <input type="text"
                       value={newType.label}
                       placeholder="Maternity Leave"
                       onChange={(e) =>
                         setNewType({ ...newType, label: e.target.value })
-                      }
-                      className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
-                    />
+                      } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Days / year</p>
-                    <input
-                      type="number"
+                    <input type="number"
                       min="0"
                       value={newType.default_entitlement}
                       onChange={(e) =>
@@ -1134,14 +1054,11 @@ export default function LeaveManagment() {
                           ...newType,
                           default_entitlement: e.target.value,
                         })
-                      }
-                      className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
-                    />
+                      } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Notice (din)</p>
-                    <input
-                      type="number"
+                    <input type="number"
                       min="0"
                       value={newType.advance_notice_days}
                       onChange={(e) =>
@@ -1149,9 +1066,7 @@ export default function LeaveManagment() {
                           ...newType,
                           advance_notice_days: e.target.value,
                         })
-                      }
-                      className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none"
-                    />
+                      } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                   </div>
                 </div>
 
@@ -1160,34 +1075,25 @@ export default function LeaveManagment() {
                     ["is_unlimited", "Unlimited (balance se nahi katti)"],
                     ["requires_certificate", "Certificate lazmi"],
                   ].map(([key, label]) => (
-                    <label
-                      key={key}
-                      className="flex items-center gap-2 cursor-pointer text-xs text-gray-400"
+                    <label key={key} className="flex items-center gap-2 cursor-pointer text-xs text-gray-400"
                     >
-                      <input
-                        type="checkbox"
+                      <input type="checkbox"
                         checked={!!newType[key]}
                         onChange={(e) =>
                           setNewType({ ...newType, [key]: e.target.checked })
-                        }
-                        className="accent-[#05DC7F] w-3.5 h-3.5"
-                      />
+                        } className="accent-[#05DC7F] w-3.5 h-3.5" />
                       {label}
                     </label>
                   ))}
                 </div>
 
                 <div className="flex gap-2">
-                  <button
-                    onClick={createType}
-                    disabled={savingType === "__new__"}
-                    className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:bg-[#04c56f] transition disabled:opacity-50"
+                  <button onClick={createType}
+                    disabled={savingType === "__new__"} className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:bg-[#04c56f] transition disabled:opacity-50"
                   >
                     {savingType === "__new__" ? "Ban rahi hai..." : "Banayein"}
                   </button>
-                  <button
-                    onClick={() => setNewType(null)}
-                    className="px-4 py-2 rounded-xl text-gray-400 border border-gray-700 text-sm hover:bg-gray-800 transition"
+                  <button onClick={() => setNewType(null)} className="px-4 py-2 rounded-xl text-gray-400 border border-gray-700 text-sm hover:bg-gray-800 transition"
                   >
                     Cancel
                   </button>
@@ -1206,9 +1112,7 @@ export default function LeaveManagment() {
           </Panel>
         ) : displayList.length === 0 ? (
           <Panel>
-            <EmptyState
-              icon={activeTab === "pending" ? Inbox : Search}
-              title={
+            <EmptyState icon={activeTab === "pending" ? Inbox : Search} title={
                 activeTab === "pending"
                   ? "Koi request aap ka intezar nahi kar rahi"
                   : "Koi leave request nahi mili"
@@ -1217,15 +1121,12 @@ export default function LeaveManagment() {
                 activeTab === "pending"
                   ? "Nayi request aate hi yahan dikhegi — aur aap ko email bhi jayegi."
                   : "Filter badal kar dekhein, ya All chunein."
-              }
-            />
+              } />
           </Panel>
         ) : (
           <div className="flex flex-col gap-4">
             {current.map((item) => (
-              <div
-                key={item.leave_id}
-                className="flex flex-col lg:flex-row justify-between gap-4 p-5 rounded-2xl bg-black/40 border border-[#05DC7F]/25 hover:border-[#05DC7F]/45 transition-all"
+              <div key={item.leave_id} className="flex flex-col lg:flex-row justify-between gap-4 p-5 rounded-2xl bg-black/40 border border-[#05DC7F]/25 hover:border-[#05DC7F]/45 transition-all"
               >
                 <div className="flex flex-col gap-2 min-w-0">
                   <h3 className="text-white font-semibold">
@@ -1239,8 +1140,7 @@ export default function LeaveManagment() {
                   </h3>
 
                   <div className="flex flex-wrap gap-2">
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded-full ${leaveTypeColor[item.leave_type] || "bg-gray-500/20 text-gray-400"}`}
+                    <span className={`px-2 py-0.5 text-xs rounded-full ${leaveTypeColor[item.leave_type] || "bg-gray-500/20 text-gray-400"}`}
                     >
                       {item.leave_type?.toUpperCase()}
                     </span>
@@ -1253,9 +1153,7 @@ export default function LeaveManagment() {
                       </span>
                     )}
                     {item.has_medical_cert && (
-                      <button
-                        onClick={() => viewCertificate(item.leave_id)}
-                        className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition flex items-center gap-1"
+                      <button onClick={() => viewCertificate(item.leave_id)} className="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition flex items-center gap-1"
                       >
                         <Paperclip size={11} /> Certificate
                       </button>
@@ -1284,7 +1182,7 @@ export default function LeaveManagment() {
 
                   {item.agent_reason && (
                     <p className="text-yellow-400/90 text-xs mt-1 flex items-start gap-1.5">
-                      <Bot size={14}  className="mt-0.5 shrink-0" />
+                      <Bot size={14} className="mt-0.5 shrink-0" />
                       {item.agent_reason}
                     </p>
                   )}
@@ -1317,12 +1215,10 @@ export default function LeaveManagment() {
 
                 <div className="flex items-center">
                   {item.status === "pending" && (
-                    <button
-                      onClick={() => {
+                    <button onClick={() => {
                         setSelected(item);
                         setCeoNote("");
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#05DC7F] hover:bg-[#04c56f] text-black font-semibold transition whitespace-nowrap"
+                      }} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#05DC7F] hover:bg-[#04c56f] text-black font-semibold transition whitespace-nowrap"
                     >
                       <Eye size={14} /> Review
                     </button>
@@ -1331,10 +1227,8 @@ export default function LeaveManagment() {
                   {/* ── Approved leave CEO kabhi bhi cancel kar sakta hai,
                         chahe shuru ho chuki ho (employee nahi kar sakta) ── */}
                   {item.status === "approved" && (
-                    <button
-                      onClick={() => cancelApproved(item)}
-                      disabled={deciding}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition whitespace-nowrap text-sm disabled:opacity-40"
+                    <button onClick={() => cancelApproved(item)}
+                      disabled={deciding} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition whitespace-nowrap text-sm disabled:opacity-40"
                     >
                       <X size={14} /> Cancel Leave
                     </button>
@@ -1343,11 +1237,9 @@ export default function LeaveManagment() {
               </div>
             ))}
 
-            <Pagination
-              page={currentPage}
+            <Pagination page={currentPage}
               totalPages={totalPages}
-              onChange={setCurrentPage}
-            />
+              onChange={setCurrentPage} />
           </div>
         ))}
 
@@ -1355,11 +1247,9 @@ export default function LeaveManagment() {
       {selected && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
           <div className="w-full max-w-2xl bg-black border border-[#05DC7F]/40 rounded-2xl p-6 max-h-[90vh] overflow-y-auto relative">
-            <button
-              onClick={() => setSelected(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+            <button onClick={() => setSelected(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white"
             >
-              <X size={14}  size={20} />
+              <X size={20} />
             </button>
 
             <h2 className="text-white text-xl font-bold mb-1">
@@ -1373,8 +1263,7 @@ export default function LeaveManagment() {
             <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
               <div className="p-3 rounded-lg bg-black/40 border border-[#05DC7F]/15">
                 <p className="text-gray-500 text-xs mb-1">Leave Type</p>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs ${leaveTypeColor[selected.leave_type] || ""}`}
+                <span className={`px-2 py-0.5 rounded-full text-xs ${leaveTypeColor[selected.leave_type] || ""}`}
                 >
                   {selected.leave_type?.toUpperCase()}
                 </span>
@@ -1400,8 +1289,7 @@ export default function LeaveManagment() {
               </div>
               <div className="p-3 rounded-lg bg-black/40 border border-[#05DC7F]/15">
                 <p className="text-gray-500 text-xs mb-1">Balance</p>
-                <p
-                  className={
+                <p className={
                     selected.remaining_balance != null &&
                     selected.remaining_balance < selected.deductible_days
                       ? "text-red-400"
@@ -1424,9 +1312,7 @@ export default function LeaveManagment() {
             )}
 
             {selected.has_medical_cert && (
-              <button
-                onClick={() => viewCertificate(selected.leave_id)}
-                className="mb-4 w-full py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition text-sm flex items-center justify-center gap-2"
+              <button onClick={() => viewCertificate(selected.leave_id)} className="mb-4 w-full py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition text-sm flex items-center justify-center gap-2"
               >
                 <Paperclip size={14} /> Medical Certificate kholein
                 {selected.certificate_name && (
@@ -1469,13 +1355,10 @@ export default function LeaveManagment() {
                   — employee ko yahi wajah dikhegi
                 </span>
               </p>
-              <textarea
-                value={ceoNote}
+              <textarea value={ceoNote}
                 onChange={(e) => setCeoNote(e.target.value)}
                 rows={3}
-                placeholder="Reject kar rahe hain to wajah zaroor likhein"
-                className="w-full bg-black/40 border border-[#05DC7F]/30 text-white rounded-lg px-3 py-2 outline-none text-sm resize-none"
-              />
+                placeholder="Reject kar rahe hain to wajah zaroor likhein" className="w-full bg-black/40 border border-[#05DC7F]/30 text-white rounded-lg px-3 py-2 outline-none text-sm resize-none" />
               {/* Reject par wajah lazmi — employee ko pata to chale kyun hui */}
               {!ceoNote.trim() && (
                 <p className="text-gray-500 text-xs mt-1">
@@ -1485,25 +1368,20 @@ export default function LeaveManagment() {
             </div>
 
             <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => decide(selected.leave_id, "approve")}
-                disabled={deciding}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#05DC7F] hover:bg-[#04c56f] text-black font-semibold transition disabled:opacity-50"
+              <button onClick={() => decide(selected.leave_id, "approve")}
+                disabled={deciding} className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#05DC7F] hover:bg-[#04c56f] text-black font-semibold transition disabled:opacity-50"
               >
-                {deciding ? <Loader2 size={14}  className="animate-spin" /> : <Check size={14} />}
+                {deciding ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Approve
               </button>
-              <button
-                onClick={() => decide(selected.leave_id, "reject")}
-                disabled={deciding || !ceoNote.trim()}
-                title={
+              <button onClick={() => decide(selected.leave_id, "reject")}
+                disabled={deciding || !ceoNote.trim()} title={
                   !ceoNote.trim()
                     ? "Reject karne ke liye wajah likhna zaroori hai"
                     : ""
-                }
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                } className="flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {deciding ? <Loader2 size={14}  className="animate-spin" /> : <Ban size={14} />}
+                {deciding ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
                 Reject
               </button>
             </div>
