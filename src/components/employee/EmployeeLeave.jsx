@@ -10,7 +10,7 @@ import {
   XCircle,
   Ban,
   Loader2,
-  Sparkles,
+  Info,
   Paperclip,
   RefreshCw,
   Inbox,
@@ -28,37 +28,41 @@ import {
 
 const API = "http://127.0.0.1:8000";
 
-// Backend ki hadd — dono jagah ek hi rehni chahiye (leave.py: MIN_REASON_LENGTH)
+// Backend limit — both sides must agree (leave.py: MIN_REASON_LENGTH)
 const MIN_REASON = 5;
 
 // ──────────────────────────────────────────
-// Leave types ab SERVER se aati hain
+// Leave types now come from the SERVER
 // ──────────────────────────────────────────
-// Pehle yeh list yahan hardcoded thi. Magar har company ki policy alag hai —
-// kisi ke paas "casual" hai hi nahi, kisi ke paas "maternity" bhi hai.
-// Ab har type ke apne rules (certificate lazmi? kitne din pehle?) bhi
-// server se aate hain, is liye UI khud-ba-khud policy ke mutabiq chalta hai.
+// This list used to be hardcoded here. But every company's policy differs —
+// some have no "casual" at all, others also have "maternity". Each type now
+// carries its own rules (certificate required? how many days' notice?), so
+// the UI follows the company policy on its own.
 
 const typeHint = (b) => {
   const bits = [];
   if (b.advance_notice_days > 0)
-    bits.push(`kam se kam ${b.advance_notice_days} din pehle apply karein`);
-  else bits.push("aaj hi apply kar sakte hain");
-  if (b.requires_certificate) bits.push("medical certificate LAZMI hai");
-  if (b.unlimited) bits.push("balance se nahi katti");
+    bits.push(`apply at least ${b.advance_notice_days} day(s) in advance`);
+  else bits.push("can be applied for the same day");
+  if (b.requires_certificate) bits.push("a medical certificate is REQUIRED");
+  if (b.unlimited) bits.push("does not count against your balance");
+  // Pay must be clear BEFORE applying — finding out from the payslip that
+  // salary was deducted feels like a trick
+  if (b.is_paid === false) bits.push("these days are UNPAID");
   return `${b.label} — ${bits.join(", ")}`;
 };
 
-// ──── Date string banao (koi timezone shift nahi) ────
+// ──── Build a date string with no timezone shift ────
 const localDateStr = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
   ).padStart(2, "0")}`;
 
-// ──── PKT (UTC+5) ki date ────
-// Backend saara hisaab PKT pe karta hai. Browser ki local date use karein to
-// jis machine ka timezone PKT se alag ho wahan UI aur server ka "aaj" alag
-// ho jata hai — advance-notice ki min date aur Cancel button dono galat hote hain.
+// ──── Date in PKT (UTC+5) ────
+// The backend does all its arithmetic in PKT. Using the browser's local date
+// would make the UI's "today" differ from the server's on any machine in
+// another timezone — breaking both the advance-notice minimum date and the
+// Cancel button.
 const pktDateStr = () =>
   new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
@@ -83,7 +87,7 @@ const prettyDateTime = (s) => {
   });
 };
 
-// Rang kit se — CEO ki Leave screen par bhi bilkul yehi rang hain
+// Colors from the kit — the HR Leave screen uses exactly the same ones
 const STATUS_TONE = {
   approved: "ok",
   pending: "warn",
@@ -113,10 +117,11 @@ function BalanceCard({ balance }) {
     unlimited,
     requires_certificate,
     advance_notice_days,
+    is_paid,
     source,
   } = balance;
 
-  // ──── Policy mein type hai magar quota 0 — apply nahi ho sakti ────
+  // ──── Type exists in the policy but the quota is 0 — cannot be applied for ────
   const notAllowed = !unlimited && total_entitlement === 0;
   const low = !unlimited && !notAllowed && remaining_days <= 2;
   const pct =
@@ -140,7 +145,7 @@ function BalanceCard({ balance }) {
           : "border-[#05DC7F]/25 bg-black/30 hover:border-[#05DC7F]/50 hover:bg-black/40"
       }`}
     >
-      {/* ── Naam ── */}
+      {/* ── Name ── */}
       <p
         className="text-gray-300 text-sm font-medium leading-tight truncate"
         title={label || leave_type}
@@ -148,7 +153,7 @@ function BalanceCard({ balance }) {
         {label || leave_type}
       </p>
 
-      {/* ── Bara adad ── */}
+      {/* ── The big number ── */}
       <div className="flex items-baseline gap-1.5 mt-3">
         <span className={`text-4xl font-bold leading-none ${accent}`}>
           {unlimited ? "∞" : remaining_days}
@@ -160,10 +165,10 @@ function BalanceCard({ balance }) {
 
       <p className="text-gray-500 text-xs mt-1">
         {unlimited
-          ? "koi limit nahi"
+          ? "no limit"
           : notAllowed
-            ? "is saal allowed nahi"
-            : `${remaining_days === 1 ? "din" : "din"} baqi`}
+            ? "not allowed this year"
+            : `${remaining_days === 1 ? "day" : "days"} left`}
       </p>
 
       {/* ── Progress ── */}
@@ -180,9 +185,17 @@ function BalanceCard({ balance }) {
 
       {/* ── Rules ── */}
       <div className="flex flex-wrap gap-1 mt-3 min-h-[18px]">
+        {is_paid === false && (
+          <span
+            title="One day's salary is deducted for every working day of this leave"
+            className="px-1.5 py-0.5 text-[10px] rounded bg-orange-500/15 text-orange-400/90"
+          >
+            unpaid
+          </span>
+        )}
         {requires_certificate && (
           <span
-            title="Is type ke saath medical certificate lagana zaroori hai"
+            title="A medical certificate must be attached with this leave type"
             className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/15 text-red-400/90"
           >
             certificate
@@ -190,14 +203,14 @@ function BalanceCard({ balance }) {
         )}
         {advance_notice_days > 0 ? (
           <span
-            title={`Kam se kam ${advance_notice_days} din pehle apply karni hoti hai`}
+            title={`Must be applied for at least ${advance_notice_days} day(s) in advance`}
             className="px-1.5 py-0.5 text-[10px] rounded bg-white/5 text-gray-500"
           >
-            {advance_notice_days}d pehle
+            {advance_notice_days}d notice
           </span>
         ) : (
           <span
-            title="Usi din bhi apply kar sakte hain"
+            title="Can be applied for on the same day"
             className="px-1.5 py-0.5 text-[10px] rounded bg-white/5 text-gray-500"
           >
             same day
@@ -205,7 +218,7 @@ function BalanceCard({ balance }) {
         )}
         {source === "policy" && (
           <span
-            title="Yeh type company ki policy document se aayi hai"
+            title="This type comes from the company policy document"
             className="px-1.5 py-0.5 text-[10px] rounded bg-[#05DC7F]/10 text-[#05DC7F]/80"
           >
             policy
@@ -215,7 +228,7 @@ function BalanceCard({ balance }) {
 
       {/* ── Used ── */}
       {!unlimited && used_days > 0 && (
-        <p className="text-gray-600 text-[10px] mt-2">{used_days} din use ho chuke</p>
+        <p className="text-gray-600 text-[10px] mt-2">{used_days} days used</p>
       )}
     </div>
   );
@@ -239,9 +252,9 @@ export default function EmployeeLeave() {
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState(null);
 
-  // ──── Render ke doran new Date() nahi — ek dafa mount pe ────
+  // ──── No new Date() during render — once, on mount ────
   const [today, setToday] = useState(() => pktDateStr());
-  // ──── today se N din aage ki date (pure — Date.now() nahi) ────
+  // ──── N days after `today` (pure — no Date.now()) ────
   const dateAfter = (days) => {
     const [y, m, d] = today.split("-").map(Number);
     return localDateStr(new Date(y, m - 1, d + days));
@@ -274,7 +287,7 @@ export default function EmployeeLeave() {
       if (balRes.ok) setBalances(bal.balances || []);
       if (histRes.ok) setHistory(hist.history || []);
     } catch {
-      setError("Server se connect nahi ho paya");
+      setError("Could not connect to the server");
     }
     setLoading(false);
   }, [employeeId, authHeaders]);
@@ -283,8 +296,8 @@ export default function EmployeeLeave() {
     fetchAll();
   }, [fetchAll]);
 
-  // ──── Chuni hui type ka balance khatam ho to pehli chalne wali type pe jao ────
-  // Warna form khulte hi blocked type select hoti hai aur submit dabta hi nahi
+  // ──── If the selected type is out of balance, switch to the first usable one ────
+  // Otherwise the form opens with a blocked type selected and Submit never enables
   useEffect(() => {
     if (!balances.length) return;
     const current = balances.find((b) => b.leave_type === form.leave_type);
@@ -297,9 +310,9 @@ export default function EmployeeLeave() {
     if (usable) setForm((f) => ({ ...f, leave_type: usable.leave_type }));
   }, [balances, form.leave_type]);
 
-  // ──── Page khula reh jaye to bhi PKT ki date taza rahe ────
-  // Warna aadhi raat guzarne par Cancel button dikhta rehta hai jabke
-  // leave shuru ho chuki hoti hai (server usay reject karta hai)
+  // ──── Keep the PKT date fresh even if the page stays open ────
+  // Otherwise, once midnight passes, the Cancel button keeps showing on a
+  // leave that has already started (and the server rejects it)
   useEffect(() => {
     const id = setInterval(() => {
       const now = pktDateStr();
@@ -309,7 +322,7 @@ export default function EmployeeLeave() {
   }, []);
 
   // ══════════════════════════════════════
-  // Derived — form ka live preview
+  // Derived — live preview for the form
   // ══════════════════════════════════════
   const selectedBalance = balances.find(
     (b) => b.leave_type === form.leave_type,
@@ -323,30 +336,30 @@ export default function EmployeeLeave() {
     return diff > 0 ? diff : 0;
   }, [form.start_date, form.end_date]);
 
-  // ──── Is type ke apne rules (server se aaye hue) ────
+  // ──── This type's own rules (sent by the server) ────
   const noticeDays = selectedBalance?.advance_notice_days ?? 0;
-  // guzri hui date bhi chalti hai jab notice 0 ho (sick/emergency)
+  // A past date is still allowed when notice is 0 (sick/emergency)
   const minStartDate = noticeDays > 0 ? dateAfter(noticeDays) : undefined;
 
   const dateError =
     form.end_date && form.start_date && form.end_date < form.start_date
-      ? "End date start date se pehle nahi ho sakti"
+      ? "End date cannot be before the start date"
       : minStartDate && form.start_date < minStartDate
-        ? `${selectedBalance?.label || form.leave_type} kam se kam ${noticeDays} ` +
-          `din pehle apply hoti hai — sab se pehli mumkin tareekh ${minStartDate}`
+        ? `${selectedBalance?.label || form.leave_type} needs at least ${noticeDays} ` +
+          `day(s) notice — the earliest possible date is ${minStartDate}`
         : null;
 
-  // ──── Balance bilkul khatam — is type par apply hi nahi ho sakti ────
+  // ──── Balance fully used up — this type cannot be applied for ────
   const balanceEmpty = (b) => b && !b.unlimited && b.remaining_days <= 0;
   const typeBlocked = balanceEmpty(selectedBalance);
 
-  // ──── Kuch types bina certificate ke nahi ────
+  // ──── Some types cannot be applied for without a certificate ────
   const certRequired = !!selectedBalance?.requires_certificate;
   const certMissing = certRequired && !certificate;
 
-  // ──── Wajah har type par lazmi hai ────
-  // CEO isi par faisla karta hai aur Leave Agent bhi isay policy ke saath
-  // parhta hai — khali reason dono ko andhera rakhta hai
+  // ──── A reason is required for every type ────
+  // HR decides on it and reads it alongside the company policy — an empty
+  // reason leaves everyone in the dark
   const reasonText = form.reason.trim();
   const reasonMissing = reasonText.length < MIN_REASON;
 
@@ -367,21 +380,21 @@ export default function EmployeeLeave() {
     }
     if (typeBlocked) {
       setError(
-        `${form.leave_type} leave ka balance khatam hai — is type par apply nahi ho sakti`,
+        `Your ${form.leave_type} leave balance is finished — you cannot apply for this type`,
       );
       return;
     }
     if (certMissing) {
       setError(
-        `${selectedBalance?.label || form.leave_type} ke saath medical certificate lagana zaroori hai`,
+        `A medical certificate must be attached with ${selectedBalance?.label || form.leave_type}`,
       );
       return;
     }
     if (reasonMissing) {
       setError(
         reasonText.length === 0
-          ? "Leave ki wajah likhna zaroori hai"
-          : `Wajah thori tafseel se likhein (kam se kam ${MIN_REASON} harf)`,
+          ? "Please give a reason for your leave"
+          : `Please give a little more detail (at least ${MIN_REASON} characters)`,
       );
       return;
     }
@@ -398,20 +411,20 @@ export default function EmployeeLeave() {
 
       const res = await fetch(`${API}/leave/request`, {
         method: "POST",
-        headers: authHeaders, // Content-Type FormData khud set karti hai
+        headers: authHeaders, // FormData sets Content-Type itself
         body,
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Leave request submit nahi hui");
+        setError(data.detail || "Your leave request could not be submitted");
         setSubmitting(false);
         return;
       }
 
       setMessage({
         type: "pending",
-        text: "Request bhej di gayi — CEO approval ka intezar",
+        text: "Request sent — waiting for HR approval",
         detail: data.reason,
         days: data.deductible_days,
         total: data.total_days,
@@ -448,18 +461,18 @@ export default function EmployeeLeave() {
       const res = await fetch(`${API}/leave/cancel/${leaveId}`, {
         method: "POST",
         headers: { ...authHeaders, "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "Employee ne cancel ki" }),
+        body: JSON.stringify({ reason: "Cancelled by employee" }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Cancel nahi ho payi");
+        setError(data.detail || "Could not cancel this request");
       } else {
         setMessage({
           type: "pending",
-          text: "Leave cancel ho gayi",
+          text: "Leave cancelled",
           detail: data.days_restored
-            ? `${data.days_restored} din balance mein wapis aa gaye`
+            ? `${data.days_restored} day(s) returned to your balance`
             : null,
         });
         await fetchAll();
@@ -476,13 +489,13 @@ export default function EmployeeLeave() {
         headers: authHeaders,
       });
       if (!res.ok) {
-        setError("Certificate available nahi hai");
+        setError("Certificate is not available");
         return;
       }
       const blob = await res.blob();
       window.open(URL.createObjectURL(blob), "_blank");
     } catch {
-      setError("Certificate load nahi hua");
+      setError("Could not load the certificate");
     }
   };
 
@@ -493,7 +506,7 @@ export default function EmployeeLeave() {
   const filtered =
     filter === "All" ? history : history.filter((h) => h.status === filter);
 
-  // Chip par ginti — kis filter mein kitni requests hain, click se pehle
+  // Counts on the chips — how many requests each filter holds, before clicking
   const filterCounts = history.reduce(
     (acc, h) => ({ ...acc, [h.status]: (acc[h.status] || 0) + 1 }),
     { All: history.length },
@@ -548,30 +561,29 @@ export default function EmployeeLeave() {
 
             {message.days != null && (
               <span className="text-gray-400 text-xs">
-                {message.total} calendar din — balance se{" "}
-                <b className="text-white">{message.days} working days</b> katenge
+                {message.total} calendar days — {" "}
+                <b className="text-white">{message.days} working days</b> will be
+                deducted from your balance
               </span>
             )}
 
             {message.detail && (
               <span className="text-gray-400 text-xs flex items-start gap-1.5 mt-1">
-                <Sparkles size={12} className="mt-0.5 shrink-0" />
+                <Info size={12} className="mt-0.5 shrink-0" />
                 {message.detail}
               </span>
             )}
 
             {message.recommendation === "approve" && (
               <span className="text-[#05DC7F] text-xs">
-                Agent ka mashwara: policy ke mutabiq theek hai — CEO ki
-                manzoori baqi
+                Checked against the leave policy — awaiting HR approval
               </span>
             )}
 
             {message.autoAt && (
               <span className="text-gray-400 text-xs">
-                CEO ne {message.autoHours} ghante mein jawab na diya to{" "}
-                <b className="text-white">{prettyDateTime(message.autoAt)}</b> ko
-                khud approve ho jayegi
+                You can expect a response by{" "}
+                <b className="text-white">{prettyDateTime(message.autoAt)}</b>
               </span>
             )}
 
@@ -597,12 +609,12 @@ export default function EmployeeLeave() {
         </h2>
         {balances.length === 0 ? (
           <div className="p-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400/90 text-sm">
-            Abhi koi leave type set nahi hai — CEO se raabta karein.
+            No leave types have been set up yet — please contact HR.
           </div>
         ) : (
-          // auto-FIT (auto-fill nahi) — khali tracks gir jate hain, is liye
-          // ek type hat jaye to baqi cards phail kar poori row bhar lete hain.
-          // auto-fill khali jagah chhod deta tha.
+          // auto-FIT (not auto-fill) — empty tracks collapse, so when a type
+          // is removed the remaining cards stretch to fill the row.
+          // auto-fill used to leave a gap behind.
           <div
             className="grid gap-4"
             style={{
@@ -638,11 +650,11 @@ export default function EmployeeLeave() {
                     disabled={empty}
                     title={
                       empty
-                        ? `${bal.label} ka balance khatam hai — apply nahi ho sakti`
+                        ? `Your ${bal.label} balance is finished — you cannot apply for it`
                         : typeHint(bal)
                     }
                     onClick={() => {
-                      // ──── Is type ka advance notice utna aage kar do ────
+                      // ──── Push the dates forward by this type's notice ────
                       const notice = bal.advance_notice_days || 0;
                       const minDate =
                         notice > 0 ? dateAfter(notice) : form.start_date;
@@ -686,8 +698,16 @@ export default function EmployeeLeave() {
               <p className="text-gray-500 text-xs mt-2">
                 {typeHint(selectedBalance)}
                 {selectedBalance.source === "policy" && (
-                  <span className="text-[#05DC7F]"> · policy document se</span>
+                  <span className="text-[#05DC7F]"> · from the policy document</span>
                 )}
+              </p>
+            )}
+            {/* Anything about money gets lost in a faint grey hint — it
+                deserves its own line, in its own colour */}
+            {selectedBalance?.is_paid === false && (
+              <p className="text-orange-400/90 text-xs mt-1">
+                This leave is unpaid — one day's salary will be deducted for
+                every working day of it
               </p>
             )}
           </div>
@@ -732,23 +752,23 @@ export default function EmployeeLeave() {
           {/* Live preview */}
           {calendarDays > 0 && !dateError && (
             <div className="text-xs text-gray-400 bg-black/30 border border-[#05DC7F]/15 rounded-lg px-3 py-2">
-              <b className="text-white">{calendarDays}</b> calendar din
+              <b className="text-white">{calendarDays}</b> calendar days
               <span className="text-gray-600"> · </span>
-              weekend/off-days balance se nahi katenge — asal hisaab server
-              policy se hoga
+              weekends and off-days are not deducted from your balance — the
+              exact figure is worked out from the company policy
             </div>
           )}
           {dateError && <p className="text-red-400 text-xs">{dateError}</p>}
 
           {typeBlocked && (
             <p className="text-red-400 text-xs">
-              {form.leave_type} leave ka balance khatam hai — is type par apply
-              nahi ho sakti. Unpaid leave use karein ya CEO se balance
-              barhwayein.
+              Your {form.leave_type} leave balance is finished — you cannot
+              apply for this type. Please use unpaid leave or ask HR to review
+              your balance.
             </p>
           )}
 
-          {/* Reason — har type par lazmi */}
+          {/* Reason — required for every type */}
           <div>
             <div className="flex justify-between items-baseline mb-1">
               <p className="text-gray-400 text-sm">
@@ -756,7 +776,7 @@ export default function EmployeeLeave() {
               </p>
               {reasonText.length > 0 && reasonMissing && (
                 <span className="text-red-400 text-xs">
-                  {MIN_REASON - reasonText.length} harf aur
+                  {MIN_REASON - reasonText.length} more characters
                 </span>
               )}
             </div>
@@ -765,7 +785,7 @@ export default function EmployeeLeave() {
               required
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              placeholder="Chhutti ki wajah likhein — CEO isi par faisla karta hai aur Leave Agent isay policy ke saath parhta hai"
+              placeholder="Tell us why you need this leave — HR reviews this alongside the company leave policy"
               className={`w-full bg-black/40 border text-white rounded-lg px-3 py-2 outline-none resize-none placeholder:text-gray-600 transition ${
                 reasonText.length > 0 && reasonMissing
                   ? "border-red-500/50"
@@ -774,7 +794,7 @@ export default function EmployeeLeave() {
             />
             {reasonText.length === 0 && (
               <p className="text-gray-500 text-xs mt-1">
-                Wajah likhna zaroori hai — bina reason ke request nahi jayegi
+                A reason is required — the request cannot be sent without one
               </p>
             )}
           </div>
@@ -785,10 +805,10 @@ export default function EmployeeLeave() {
               Medical Certificate{" "}
               {certRequired ? (
                 <span className="text-red-400">
-                  (LAZMI — sick leave ke liye)
+                  (REQUIRED for this leave type)
                 </span>
               ) : (
-                <span className="text-gray-600">(optional — PDF ya image)</span>
+                <span className="text-gray-600">(optional — PDF or image)</span>
               )}
             </p>
             <div className="flex items-center gap-3 flex-wrap">
@@ -830,8 +850,8 @@ export default function EmployeeLeave() {
 
             {certMissing && (
               <p className="text-red-400 text-xs mt-2">
-                Sick leave ke saath medical certificate lagana zaroori hai.
-                Certificate na ho to Casual ya Emergency leave use karein.
+                A medical certificate must be attached with this leave type.
+                If you do not have one, please use casual or emergency leave.
               </p>
             )}
           </div>
@@ -844,7 +864,7 @@ export default function EmployeeLeave() {
             {submitting ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                Leave Agent evaluate kar raha hai...
+                Sending your request...
               </>
             ) : (
               "Submit Request"
@@ -855,12 +875,12 @@ export default function EmployeeLeave() {
 
       {/* ── History ── */}
       <Panel
-        title="Meri Requests"
+        title="My Requests"
         icon={CalendarDays}
         actions={
           <IconButton
             icon={RefreshCw}
-            label="Dobara load karein"
+            label="Reload"
             onClick={fetchAll}
           />
         }
@@ -882,13 +902,13 @@ export default function EmployeeLeave() {
             icon={history.length === 0 ? Inbox : Search}
             title={
               history.length === 0
-                ? "Abhi tak koi leave request nahi"
-                : `"${filter}" mein koi request nahi`
+                ? "No leave requests yet"
+                : `No requests under "${filter}"`
             }
             hint={
               history.length === 0
-                ? "Upar se koi leave type chun kar apni pehli request bhejein."
-                : "Doosra filter chunein ya All par jayein."
+                ? "Pick a leave type above and send your first request."
+                : "Try another filter, or go back to All."
             }
           />
         ) : (
@@ -915,14 +935,6 @@ export default function EmployeeLeave() {
                         <span className="text-white text-sm capitalize">
                           {item.leave_type}
                         </span>
-                        {item.auto_approved && (
-                          <span
-                            title="Leave Agent ne khud approve ki"
-                            className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30"
-                          >
-                            AI
-                          </span>
-                        )}
                       </td>
 
                       <td className="py-3 px-4 text-gray-300 text-sm whitespace-nowrap">
@@ -939,7 +951,7 @@ export default function EmployeeLeave() {
                         {item.total_days !== item.deductible_days && (
                           <span
                             className="text-gray-500 text-xs"
-                            title={`${item.total_days} calendar din, magar ${item.deductible_days} working days katte hain`}
+                            title={`${item.total_days} calendar days, of which ${item.deductible_days} working days are deducted`}
                           >
                             {" "}
                             / {item.total_days}
@@ -948,9 +960,9 @@ export default function EmployeeLeave() {
                       </td>
 
                       {/* ── Decision ──
-                          CEO ka note SAB SE PEHLE — wahi asal faisla hai.
-                          Pehle agent_reason pehle check hota tha, is liye
-                          CEO ki reject ki wajah kabhi dikhti hi nahi thi. */}
+                          HR's note comes FIRST — that is the real decision.
+                          The policy note used to be checked first, which is
+                          why HR's reason for rejecting never showed at all. */}
                       <td className="py-3 px-4 max-w-xs">
                         {item.ceo_note && (
                           <div
@@ -963,7 +975,7 @@ export default function EmployeeLeave() {
                             }`}
                           >
                             <p className="text-gray-500 text-[10px] uppercase tracking-wide">
-                              {item.auto_approved ? "System" : "CEO"}
+                              HR
                             </p>
                             <p
                               className={`text-xs ${
@@ -980,9 +992,9 @@ export default function EmployeeLeave() {
                         {item.agent_reason && (
                           <p
                             className="text-gray-500 text-[11px] flex items-start gap-1"
-                            title="Leave Agent ka mashwara"
+                            title="Note from the leave policy"
                           >
-                            <Sparkles size={10} className="mt-0.5 shrink-0" />
+                            <Info size={10} className="mt-0.5 shrink-0" />
                             {item.agent_reason}
                           </p>
                         )}
@@ -1004,10 +1016,10 @@ export default function EmployeeLeave() {
                           {item.status}
                         </Pill>
 
-                        {/* ── CEO chup raha to kab khud approve hogi ── */}
+                        {/* ── When the employee can expect an answer ── */}
                         {item.status === "pending" && item.auto_approve_at && (
                           <p className="text-gray-500 text-[10px] mt-1">
-                            auto: {prettyDateTime(item.auto_approve_at)}
+                            reply by {prettyDateTime(item.auto_approve_at)}
                           </p>
                         )}
                       </td>

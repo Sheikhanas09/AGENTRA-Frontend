@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ← naya
+import { useNavigate } from "react-router-dom";
 import Layout from "../layout/Layout";
 import DashboardTab from "./DashboardTab";
 import RecruitmentTab from "./RecruitmentTab";
@@ -11,6 +11,7 @@ import LeaveManagment from "./LeaveManagment";
 import CreateUserTab from "./CreateUserTab";
 import Hiring from "./Hiring";
 import Settings from "./Settings";
+import PayrollTab from "./PayrollTab";
 import HiredEmployeesTab from "./HiredEmployeesTab";
 
 import {
@@ -28,9 +29,9 @@ import { MdOutlineTouchApp } from "react-icons/md";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const navigate = useNavigate(); // ← naya
+  const navigate = useNavigate();
 
-  // ──── Real name localStorage se ────
+  // ──── The real name, from localStorage ────
   const fullName = localStorage.getItem("full_name") || "CEO";
   const initials = fullName
     .split(" ")
@@ -95,7 +96,7 @@ export default function Dashboard() {
     "Create Employee": <CreateUserTab />,
     Attendance: <Attendance />,
     "Leave Managment": <LeaveManagment />,
-    Payroll: <div>Payroll Module</div>,
+    Payroll: <PayrollTab />,
     Settings: (
       <div>
         <Settings />

@@ -3,13 +3,13 @@ import { BotMessageSquare, X, Send } from "lucide-react";
 
 const botReplies = {
   leave:
-    "Aapki Leave Balance:\n✅ Annual Leave: 12 days\n✅ Sick Leave: 6 days\n✅ Casual Leave: 4 days\nLeave apply karne ke liye Leave tab visit karein.",
+    "Your leave balance:\n✅ Annual Leave: 12 days\n✅ Sick Leave: 6 days\n✅ Casual Leave: 4 days\nOpen the Leave tab to apply.",
   payroll:
-    "Aapki is month ki salary process ho chuki hai. Detail ke liye Payroll tab check karein. Koi aur sawaal?",
+    "Your salary for this month has been processed. Open the Payroll tab for the full breakdown. Anything else?",
   attendance:
-    "Is month aapki attendance 22/23 days hai. Last absent: Jan 28. Attendance tab mein full report dekhein.",
+    "Your attendance this month is 22/23 days. Last absent: Jan 28. The Attendance tab has the full report.",
   default:
-    "Shukriya! Main aapki request process kar raha hoon. HR department se rabta kiya jayega. Koi aur help chahiye?",
+    "Thank you — I have noted your request and HR will get back to you. Anything else I can help with?",
 };
 
 function getBotReply(text) {
@@ -33,7 +33,7 @@ export default function HRChatbot() {
     {
       id: 1,
       type: "bot",
-      text: "Assalam o Alaikum! 👋 Main aapka HR Assistant hoon. Kaise madad kar sakta hoon?",
+      text: "Hello! 👋 This is the HR help desk. How can I help you today?",
       time: getTime(),
       quickReplies: ["Leave Balance", "Payroll", "Attendance"],
     },
@@ -86,7 +86,7 @@ export default function HRChatbot() {
               <BotMessageSquare size={18} className="text-[#05DC7F]" />
             </div>
             <div className="flex-1">
-              <p className="text-white text-sm font-semibold">HR Assistant</p>
+              <p className="text-white text-sm font-semibold">HR Help Desk</p>
               <p className="text-white/40 text-[11px] flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#05DC7F] inline-block" />
                 Online · Always here to help
@@ -173,7 +173,7 @@ export default function HRChatbot() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Message HR Assistant..."
+              placeholder="Message HR..."
               className="flex-1 bg-white/5 border border-[#05DC7F]/20 rounded-full text-white text-[13px] px-4 py-2 outline-none placeholder:text-white/25 focus:border-[#05DC7F]/50 transition-colors"
             />
             <button

@@ -28,7 +28,7 @@ import {
 
 const API = "http://127.0.0.1:8000";
 
-// Work date ko parhne layak banao (UTC parse se bachte hue)
+// Make the work date readable (avoiding a UTC parse)
 const prettyWorkDate = (d) => {
   if (!d) return "—";
   const [y, m, day] = String(d).slice(0, 10).split("-").map(Number);
@@ -47,7 +47,7 @@ function LocationBadge({ lat, lng, verified, distance, note }) {
     if (note === "gps_unavailable") {
       return (
         <span
-          title="Us waqt GPS location nahi mili thi"
+          title="No GPS location was available at that moment"
           className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30"
         >
           No GPS
@@ -82,20 +82,21 @@ function LocationBadge({ lat, lng, verified, distance, note }) {
 }
 
 // ──────────────────────────────────────────
-// Meri Work Policy — employee ko poora qanoon
+// My Work Policy — the full rulebook, for the employee
 // ──────────────────────────────────────────
-// Pehle yeh sab sirf CEO ke Settings mein tha. Employee ko na break ka
-// waqt pata tha, na yeh ke kitna pehle check-in ho sakta hai, na overtime
-// kab shuru hoti hai.
+// All of this used to live only in the HR settings. Employees knew
+// neither when their break was, nor how early they could check in, nor
+// when overtime starts.
 //
-// In saari cheezon mein ek baat mushtarak hai: sab WAQT ke baare mein
-// hain, aur ek dusre se juri hui hain. Adad ki list ("late tolerance
-// 15 min", "grace 30 min") parh kar banda khud din jorta hai. Is liye
-// asal din ki LAKEER banai hai — sab kuch ek nazar mein.
+// These facts have one thing in common: they are all about TIME, and
+// they all relate to one another. Reading a list of numbers ("late
+// tolerance 15 min", "grace 30 min") forces you to assemble the day in
+// your head. So the day is drawn as an actual TIMELINE — the whole
+// shape in one look.
 //
-// Lakeer ka mehwar ghari ka waqt nahi, "shift shuru hone se kitne
-// minute" hai — is se raat ki shift (22:00–05:00) bhi bina kisi alag
-// branch ke theek baith jati hai.
+// The timeline's axis is not clock time but "minutes since the shift
+// started" — which is why a night shift (22:00–05:00) falls into place
+// without any special branch.
 
 const toMin = (hhmm) => {
   if (!hhmm) return null;
@@ -117,7 +118,7 @@ const asHours = (mins) => {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (!h) return `${m} min`;
-  return m ? `${h}h ${m}m` : `${h} ghante`;
+  return m ? `${h}h ${m}m` : `${h} hours`;
 };
 
 function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
@@ -128,8 +129,8 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
   const end = toMin(policy.shift_end);
   if (start === null || end === null) return null;
 
-  // Sab kuch shift start se aage ginte hain — aadhi raat paar karna
-  // khud hi sambhal jata hai
+  // Everything is counted forward from the shift start — crossing
+  // midnight then takes care of itself
   const rel = (hhmm) => {
     const t = toMin(hhmm);
     return t === null ? null : (t - start + 1440) % 1440;
@@ -140,8 +141,8 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
     ? -(policy.early_checkin_grace_mins || 0)
     : null;
 
-  // Lakeer check-in khulne se shuru hoti hai aur shift end ke thora
-  // baad khatam — taake overtime wala hissa bhi nazar aaye
+  // The timeline starts when check-in opens and runs a little past the
+  // shift end — so the overtime stretch is visible too
   const from = opensRel === null ? 0 : opensRel;
   const tail = Math.max(45, Math.round(shiftLen * 0.12));
   const span = shiftLen - from + tail;
@@ -151,18 +152,18 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
   const bStart = policy.break_is_fixed ? rel(policy.break_start) : null;
   const bEnd = policy.break_is_fixed ? rel(policy.break_end) : null;
 
-  // "Abhi" ka nishan — sirf us waqt jab wo lakeer par aata ho
+  // The "now" marker — only while it actually falls on the timeline
   const nowRel =
     nowMinutes === null ? null : (nowMinutes - start + 1440) % 1440;
   const showNow =
     isWorkingDay && nowRel !== null && nowRel >= from && nowRel <= shiftLen + tail;
 
-  // ──── Sirf wo nishaniyan jo yaqeeni tor par door hain ────
-  // Grace aur late-tolerance chhote hote hain (15–30 min), aur 9 ghante
-  // ki lakeer par woh shift start se sirf 14–28 pixel door girte hain —
-  // teen label ek dusre par charh jate. Is liye lakeer par sirf DIN KI
-  // SHAKAL hai; chhote adad kinare ke caption aur neeche wali grid mein
-  // poore saaf likhe hain.
+  // ──── Only markers that are reliably far apart ────
+  // Grace and late tolerance are small (15–30 min), and on a nine-hour
+  // timeline they land just 14–28 pixels from the shift start — three
+  // labels would climb over one another. So the timeline carries only
+  // the SHAPE OF THE DAY; the small numbers are spelled out in the edge
+  // captions and the grid underneath.
   const marks = [
     { at: 0, label: to12h(policy.shift_start), cap: "Shift start" },
     bStart !== null && bEnd !== null && bEnd > bStart && {
@@ -183,17 +184,17 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
         <div className="flex items-center gap-3 min-w-0">
           <Clock size={16} className="text-[#05DC7F] shrink-0" />
           <div className="min-w-0">
-            <p className="text-white text-sm font-semibold">Meri Work Policy</p>
+            <p className="text-white text-sm font-semibold">My Work Policy</p>
             <p className="text-gray-500 text-xs truncate">
               {to12h(policy.shift_start)} – {to12h(policy.shift_end)}
-              {policy.is_overnight && " (agle din)"} · {asHours(shiftLen)}
+              {policy.is_overnight && " (next day)"} · {asHours(shiftLen)}
               {policy.break_is_fixed &&
                 ` · break ${to12h(policy.break_start)}`}
             </p>
           </div>
         </div>
-        {/* Chevron khud bata deta hai ke khulega ya band hoga —
-            "Dekhein / Chhupayein" likhne ki zarurat nahi */}
+        {/* The chevron already says whether this opens or closes —
+            no need to spell out "Show / Hide" */}
         <ChevronDown
           size={16}
           className={`text-gray-500 shrink-0 transition-transform ${
@@ -204,28 +205,28 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
 
       {open && (
         <div className="px-5 pb-5 pt-1 flex flex-col gap-5">
-          {/* ── Din ki lakeer ── */}
+          {/* ── The day's timeline ── */}
           <div className="pt-3">
             <div className="relative h-9">
-              {/* Poora track — check-in khulne se shift end ke baad tak */}
+              {/* Full track — from check-in opening to past the shift end */}
               <div className="absolute inset-x-0 top-3 h-3 rounded-full bg-white/[0.06]" />
 
-              {/* Shift ka hissa */}
+              {/* The shift itself */}
               <div
                 className="absolute top-3 h-3 rounded-full bg-[#05DC7F]/25"
                 style={{ left: pct(0), width: `${(shiftLen / span) * 100}%` }}
               />
 
-              {/* Grace — is waqt aana late nahi ginta */}
+              {/* Grace — arriving inside this window does not count as late */}
               {lateRel > 0 && (
                 <div
                   className="absolute top-3 h-3 bg-[#05DC7F]/55"
                   style={{ left: pct(0), width: `${(lateRel / span) * 100}%` }}
-                  title={`${policy.late_tolerance_mins} min tak late nahi ginta`}
+                  title={`Not counted as late up to ${policy.late_tolerance_mins} min`}
                 />
               )}
 
-              {/* Break — track par 2px ka faasla taake alag nazar aaye */}
+              {/* Break — lifted 2px off the track so it reads separately */}
               {bStart !== null && bEnd !== null && bEnd > bStart && (
                 <div
                   className="absolute top-[10px] h-5 rounded-md bg-amber-400/25 border border-amber-400/45"
@@ -233,7 +234,7 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
                     left: pct(bStart),
                     width: `${((bEnd - bStart) / span) * 100}%`,
                   }}
-                  title={`Break — ${to12h(policy.break_start)} se ${to12h(policy.break_end)}`}
+                  title={`Break — ${to12h(policy.break_start)} to ${to12h(policy.break_end)}`}
                 />
               )}
 
@@ -241,10 +242,10 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
               <div
                 className="absolute top-3 h-3 rounded-r-full bg-violet-400/20"
                 style={{ left: pct(shiftLen), right: 0 }}
-                title={`${policy.overtime_threshold} ghante ke baad overtime`}
+                title={`Overtime starts after ${policy.overtime_threshold} hours`}
               />
 
-              {/* Nishaniyan */}
+              {/* Markers */}
               {marks.map((m) => (
                 <div
                   key={m.cap}
@@ -259,12 +260,12 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
                 </div>
               ))}
 
-              {/* Abhi kahan hain */}
+              {/* Where you are right now */}
               {showNow && (
                 <div
                   className="absolute -top-1 flex flex-col items-center z-10"
                   style={{ left: pct(nowRel), transform: "translateX(-50%)" }}
-                  title="Abhi"
+                  title="Now"
                 >
                   <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_0_3px_rgba(0,0,0,0.6)]" />
                   <div className="w-px h-9 bg-white/70" />
@@ -272,7 +273,7 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
               )}
             </div>
 
-            {/* Labels — lakeer ke neeche */}
+            {/* Labels — below the timeline */}
             <div className="relative h-9 mt-1">
               {marks.map((m, i) => (
                 <div
@@ -298,22 +299,22 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
               ))}
             </div>
 
-            {/* Chhote adad jo lakeer par nahi samate — kinaron par */}
+            {/* Small numbers that do not fit on the timeline — on the edges */}
             <div className="flex justify-between gap-3 text-[10.5px] text-gray-500 -mt-1">
               <span>
                 {policy.enforce_shift_window
-                  ? `Check-in ${to12h(policy.checkin_opens_at)} se khulta hai`
-                  : "Check-in kabhi bhi"}
+                  ? `Check-in opens at ${to12h(policy.checkin_opens_at)}`
+                  : "Check in any time"}
               </span>
               <span className="text-right">
-                {policy.overtime_threshold} ghante ke baad overtime
+                Overtime after {policy.overtime_threshold} hours
               </span>
             </div>
 
             <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[10.5px] text-gray-500 mt-2.5 pt-2.5 border-t border-white/[0.06]">
               <span className="flex items-center gap-1.5">
                 <i className="w-2.5 h-2.5 rounded-sm bg-[#05DC7F]/55" />
-                Late nahi ({asHours(policy.late_tolerance_mins)} tak)
+                Not late (up to {asHours(policy.late_tolerance_mins)})
               </span>
               {policy.break_is_fixed && (
                 <span className="flex items-center gap-1.5">
@@ -326,7 +327,7 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
             </div>
           </div>
 
-          {/* ── Baqi qawaid ── */}
+          {/* ── The remaining rules ── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 pt-4 border-t border-white/10">
             <PolicyFact
               label="Break"
@@ -338,20 +339,20 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
               note={
                 policy.break_is_fixed
                   ? asHours(policy.break_minutes)
-                  : "Jab chahein"
+                  : "Any time"
               }
             />
             <PolicyFact
-              label="Break ka hisaab"
+              label="Break counted as"
               value={
                 policy.break_policy === "included"
-                  ? "Kaam mein ginta hai"
-                  : "Kaam se katta hai"
+                  ? "Part of work"
+                  : "Deducted from work"
               }
               note={
                 policy.break_policy === "included"
-                  ? "Net hours kam nahi hote"
-                  : "Net hours se kam hota hai"
+                  ? "Net hours are not reduced"
+                  : "Taken off your net hours"
               }
             />
             <PolicyFact
@@ -359,31 +360,31 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
               value={asHours(policy.late_tolerance_mins)}
               note={
                 policy.late_after
-                  ? `${to12h(policy.late_after)} ke baad late`
+                  ? `Late after ${to12h(policy.late_after)}`
                   : null
               }
             />
             <PolicyFact
-              label="Rozana kam se kam"
-              value={`${policy.min_daily_hours} ghante`}
-              note="Net — break ke baghair"
+              label="Minimum per day"
+              value={`${policy.min_daily_hours} hours`}
+              note="Net — excluding break"
             />
             <PolicyFact
               label="Overtime"
-              value={`${policy.overtime_threshold} ghante baad`}
-              note={`Zyada se zyada ${policy.max_overtime_per_day} ghante`}
+              value={`After ${policy.overtime_threshold} hours`}
+              note={`Up to ${policy.max_overtime_per_day} hours`}
             />
             <PolicyFact
               label="Check-in"
               value={
                 policy.enforce_shift_window
-                  ? `${to12h(policy.checkin_opens_at)} se`
-                  : "Kabhi bhi"
+                  ? `From ${to12h(policy.checkin_opens_at)}`
+                  : "Any time"
               }
               note={
                 policy.enforce_shift_window
-                  ? `${to12h(policy.checkin_closes_at)} tak — phir band`
-                  : "Koi pabandi nahi"
+                  ? `Until ${to12h(policy.checkin_closes_at)} — then closed`
+                  : "No restriction"
               }
             />
           </div>
@@ -415,8 +416,8 @@ function WorkPolicyCard({ policy, nowMinutes, isWorkingDay }) {
 
           {policy.is_overnight && (
             <p className="text-sky-400/90 text-xs bg-sky-500/10 border border-sky-500/25 rounded-lg px-3 py-2">
-              Raat ki shift — aap ki attendance us din ki ginti hai jis din
-              shift <b>shuru</b> hui thi, chahe check-out agle din ho.
+              Night shift — your attendance counts against the day the shift
+              <b> started</b>, even if you check out the next morning.
             </p>
           )}
         </div>
@@ -445,7 +446,7 @@ export default function EmployeeAttendance() {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
-  // ──── Aakhri kaamyaab reading + chal rahi location request ────
+  // ──── The last good reading + the in-flight location request ────
   const lastGoodRef = useRef(null);
   const locationPromiseRef = useRef(null);
 
@@ -496,16 +497,16 @@ export default function EmployeeAttendance() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ──── Timer — server ke elapsed se chalta hai ────
+  // ──── Timer — driven by the server's elapsed value ────
   useEffect(() => {
     if (status !== "working") return;
     const interval = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(interval);
   }, [status]);
 
-  // ──── Har minute server se sync ────
-  // Shift end hote hi check-in button khud disable ho jaye,
-  // aur timer server ke waqt se match karta rahe
+  // ──── Sync with the server every minute ────
+  // So the check-in button disables itself the moment the shift ends,
+  // and the timer stays in step with server time
   useEffect(() => {
     const interval = setInterval(() => {
       if (!document.hidden) fetchTodayStatus();
@@ -519,7 +520,7 @@ export default function EmployeeAttendance() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ──── Camera stream attach ────
+  // ──── Attach the camera stream ────
   useEffect(() => {
     if ((showCamera || showEnrollCamera) && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
@@ -527,7 +528,7 @@ export default function EmployeeAttendance() {
     }
   }, [showCamera, showEnrollCamera]);
 
-  // ──── Unmount pe camera band ────
+  // ──── Stop the camera on unmount ────
   useEffect(
     () => () => streamRef.current?.getTracks().forEach((t) => t.stop()),
     [],
@@ -564,7 +565,7 @@ export default function EmployeeAttendance() {
       const data = await res.json();
       if (res.ok) setOffice(data);
     } catch {
-      /* office info optional hai */
+      /* office info is optional */
     }
   };
 
@@ -618,12 +619,12 @@ export default function EmployeeAttendance() {
       return result;
     }
 
-    // ──── Fresh reading nahi mili — haal hi ki reading zaya mat karo ────
+    // ──── No fresh reading — do not throw away a recent one ────
     const cached = lastGoodRef.current;
     if (cached && Date.now() - cached.at < LAST_GOOD_MAX_AGE_MS) {
       const ageSec = Math.round((Date.now() - cached.at) / 1000);
       setWarning(
-        `Nayi location nahi mili — ${ageSec}s purani reading use kar rahe hain`,
+        `Could not get a new location — using a reading from ${ageSec}s ago`,
       );
       setLocating(false);
       return cached;
@@ -635,15 +636,15 @@ export default function EmployeeAttendance() {
     return null;
   }, []);
 
-  // ──── Location pehle se lena shuru kar do ────
-  // Camera khulte hi GPS lock lagna shuru ho jaye — banda photo ke liye
-  // taiyaar hota hai us 3-5 second mein reading ready ho jaati hai
+  // ──── Start acquiring the location early ────
+  // The GPS lock begins the moment the camera opens — in the 3-5 seconds
+  // it takes someone to get ready for the photo, the reading is done
   const primeLocation = useCallback(() => {
     locationPromiseRef.current = refreshLocation();
     return locationPromiseRef.current;
   }, [refreshLocation]);
 
-  // ──── Submit ke waqt: primed reading agar bohot purani ho to dobara lo ────
+  // ──── On submit: if the primed reading is too old, take a new one ────
   const getCoordsForSubmit = useCallback(
     async (maxAgeMs = 90000) => {
       const primed = await (locationPromiseRef.current || primeLocation());
@@ -654,12 +655,12 @@ export default function EmployeeAttendance() {
   );
 
   useEffect(() => {
-    // ──── Page khulte hi background mein location le lo ────
+    // ──── Fetch the location in the background as the page opens ────
     primeLocation();
   }, [primeLocation]);
 
   // ══════════════════════════════════════
-  // Face enrollment (auto, pehli dafa)
+  // Face enrolment (automatic, first time only)
   // ══════════════════════════════════════
   useEffect(() => {
     if (isEnrolled === false) startAutoEnroll();
@@ -702,13 +703,13 @@ export default function EmployeeAttendance() {
       const data = await res.json();
       if (res.ok) {
         setIsEnrolled(true);
-        setMessage("✅ Face enrolled! Ab check-in kar sakte ho.");
+        setMessage("✅ Face enrolled! You can now check in.");
       } else {
-        setError(data.detail || "Enrollment failed — dobara try karo");
+        setError(data.detail || "Enrolment failed — please try again");
       }
       setEnrolling(false);
     } catch {
-      setError("Camera permission chahiye!");
+      setError("Camera permission is required");
       setShowEnrollCamera(false);
       setEnrolling(false);
     }
@@ -722,7 +723,7 @@ export default function EmployeeAttendance() {
     setError("");
     setMessage("");
 
-    // ──── GPS abhi se lagna shuru — photo tak reading ready ho jayegi ────
+    // ──── Start GPS now — the reading will be ready by photo time ────
     primeLocation();
 
     try {
@@ -732,8 +733,8 @@ export default function EmployeeAttendance() {
       streamRef.current = stream;
       setShowCamera(true);
     } catch {
-      // ──── Camera na mile to bhi attendance ruknI nahi chahiye ────
-      setWarning("Camera nahi mila — photo ke baghair mark kar rahe hain");
+      // ──── Attendance must not stop just because there is no camera ────
+      setWarning("No camera available — marking your attendance without a photo");
       if (action === "checkin") await doCheckIn(null);
       else await doCheckOut(null);
     }
@@ -767,24 +768,24 @@ export default function EmployeeAttendance() {
   // ══════════════════════════════════════
   const locationResultMessage = (data) => {
     if (data.location_note === "out_of_range") {
-      return ` ⚠ Office se bahar (${Math.round(data.distance_meters ?? data.checkout_distance_meters ?? 0)}m) — CEO ko flag dikhega`;
+      return ` ⚠ Outside the office (${Math.round(data.distance_meters ?? data.checkout_distance_meters ?? 0)}m) — this will be flagged for HR`;
     }
     if (data.location_note === "gps_unavailable") {
-      return " ⚠ GPS nahi mili — location verify nahi hui";
+      return " ⚠ No GPS — location could not be verified";
     }
     return "";
   };
 
   const doCheckIn = async (imageBase64) => {
     setLoading(true);
-    setLoadingText("Location le rahe hain...");
+    setLoadingText("Getting your location...");
     setError("");
     setMessage("");
 
     try {
-      // ──── Camera khulte waqt jo request chali thi wahi use karo ────
+      // ──── Reuse the request that started when the camera opened ────
       const coords = await getCoordsForSubmit();
-      setLoadingText("Check-in ho raha hai...");
+      setLoadingText("Checking you in...");
 
       const res = await fetch(`${API}/attendance/check-in`, {
         method: "POST",
@@ -823,14 +824,14 @@ export default function EmployeeAttendance() {
 
   const doCheckOut = async (imageBase64) => {
     setLoading(true);
-    setLoadingText("Location le rahe hain...");
+    setLoadingText("Getting your location...");
     setError("");
     setMessage("");
 
     try {
-      // ──── Camera khulte waqt jo request chali thi wahi use karo ────
+      // ──── Reuse the request that started when the camera opened ────
       const coords = await getCoordsForSubmit();
-      setLoadingText("Check-out ho raha hai...");
+      setLoadingText("Checking you out...");
 
       const res = await fetch(`${API}/attendance/check-out`, {
         method: "POST",
@@ -861,7 +862,7 @@ export default function EmployeeAttendance() {
           (data.is_overtime ? ` | OT: ${formatMinutes(data.overtime_minutes)}` : "") +
           (data.is_undertime ? ` | UT: ${formatMinutes(data.undertime_minutes)}` : "") +
           (data.is_early_checkout
-            ? ` | Shift end se ${formatMinutes(data.early_checkout_minutes)} pehle`
+            ? ` | ${formatMinutes(data.early_checkout_minutes)} before the shift ended`
             : "") +
           locationResultMessage(data),
       );
@@ -943,14 +944,14 @@ export default function EmployeeAttendance() {
     officeDistance <=
       office.office.radius_meters + Math.min(location?.accuracy || 0, 250);
 
-  // ──── Check-in window — shift ke bahar check-in nahi hota ────
+  // ──── Check-in window — no checking in outside the shift ────
   const checkinWindow = todayInfo?.checkin_window || office?.checkin_window;
   const checkinBlocked = checkinWindow?.open === false;
 
-  // ──── "Abhi" ka waqt SERVER se ────
-  // Browser ki ghari galat ho sakti hai ya timezone alag ho sakta hai.
-  // Attendance ka har faisla server ke waqt par hota hai, is liye policy
-  // lakeer ka nishan bhi wahin se aana chahiye.
+  // ──── "Now" comes from the SERVER ────
+  // The browser clock can be wrong, or its timezone different. Every
+  // attendance decision is made on server time, so the marker on the
+  // policy timeline must come from there too.
   const serverMinutes = (() => {
     const stamp = todayInfo?.server_time || office?.server_time;
     if (!stamp) return null;
@@ -958,7 +959,7 @@ export default function EmployeeAttendance() {
     return m ? Number(m[1]) * 60 + Number(m[2]) : null;
   })();
 
-  // Rang kit se — CEO ki screen par bhi bilkul yehi hara/peela/laal hai
+  // Colors from the kit — the HR screen uses exactly the same green/amber/red
   const statusTone = { Present: "ok", Late: "warn", Absent: "bad" };
   const getRowStatus = (row) => {
     if (!row.check_in_time) return "Absent";
@@ -972,8 +973,8 @@ export default function EmployeeAttendance() {
           hour: "2-digit",
           minute: "2-digit",
         });
-  // "2026-08-05" ko UTC midnight na samjho — warna kuch timezones mein
-  // ek din pehle ki date dikhti hai
+  // Do not read "2026-08-05" as UTC midnight — in some timezones that
+  // shows the previous day
   const formatDate = (dt) => {
     if (!dt) return "—";
     const [y, m, d] = String(dt).slice(0, 10).split("-").map(Number);
@@ -1026,7 +1027,7 @@ export default function EmployeeAttendance() {
             </div>
             <h2 className="text-white text-xl font-bold">Face Enrollment</h2>
             <p className="text-gray-400 text-sm text-center">
-              {enrolling ? "Enrolling..." : "Camera ready ho raha hai..."}
+              {enrolling ? "Enrolling..." : "Getting the camera ready..."}
             </p>
             {enrolling && (
               <div className="w-8 h-8 border-2 border-[#05DC7F] border-t-transparent rounded-full animate-spin" />
@@ -1037,7 +1038,7 @@ export default function EmployeeAttendance() {
         {showEnrollCamera && (
           <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
             <div className="bg-[#111] p-6 rounded-xl flex flex-col gap-4 items-center">
-              <p className="text-white font-semibold">Camera seedha dekho...</p>
+              <p className="text-white font-semibold">Look straight at the camera...</p>
               <video
                 ref={videoRef}
                 autoPlay
@@ -1047,7 +1048,7 @@ export default function EmployeeAttendance() {
               />
               <canvas ref={canvasRef} className="hidden" />
               <p className="text-[#05DC7F] text-sm animate-pulse">
-                Auto capture ho raha hai...
+                Capturing...
               </p>
             </div>
           </div>
@@ -1078,9 +1079,9 @@ export default function EmployeeAttendance() {
         </div>
       )}
 
-      {/* ── Meri Work Policy ──
-          Employee ko wo sab qawaid dikhte hain jin par uski attendance
-          napi jati hai — pehle yeh sirf CEO ke Settings mein the */}
+      {/* ── My Work Policy ──
+          Employees see every rule their attendance is measured against —
+          all of this used to live only in the HR settings */}
       <WorkPolicyCard
         policy={office?.policy}
         nowMinutes={serverMinutes}
@@ -1098,7 +1099,7 @@ export default function EmployeeAttendance() {
           {status === "working" && `Working — ${formatElapsed(elapsed)}`}
           {status === "paused" && "On Break"}
           {status === "checked_out" && "Checked Out ✅"}
-          {status === "on_leave" && "Aaj aap leave pe hain 🌴"}
+          {status === "on_leave" && "You are on leave today 🌴"}
         </h2>
 
         {/* ── Live location ── */}
@@ -1106,7 +1107,7 @@ export default function EmployeeAttendance() {
           <div className="text-gray-400 text-sm flex items-center gap-2">
             <MapPin size={14} />
             {locating ? (
-              "Location le rahe hain..."
+              "Getting your location..."
             ) : location ? (
               <span>
                 {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
@@ -1127,7 +1128,7 @@ export default function EmployeeAttendance() {
             <button
               onClick={primeLocation}
               disabled={locating}
-              title="Location dobara lo"
+              title="Refresh location"
               className="text-[#05DC7F] hover:text-white transition disabled:opacity-40"
             >
               <RefreshCw size={13} className={locating ? "animate-spin" : ""} />
@@ -1138,43 +1139,43 @@ export default function EmployeeAttendance() {
             <p
               className={`text-xs ${withinOffice ? "text-[#05DC7F]" : "text-yellow-400"}`}
             >
-              {office.office.office_name} se {Math.round(officeDistance)}m
+              {Math.round(officeDistance)}m from {office.office.office_name}
               {withinOffice
-                ? " — office range ke andar ✓"
-                : ` — range ${office.office.radius_meters}m se bahar`}
+                ? " — inside office range ✓"
+                : ` — outside the ${office.office.radius_meters}m range`}
             </p>
           )}
           {office && !office.office && (
             <p className="text-gray-500 text-xs">
-              Office location set nahi — GPS verification skip
+              No office location set — GPS verification skipped
             </p>
           )}
           {office && !office.is_working_day && (
             <p className="text-gray-500 text-xs">
-              Aaj working day nahi hai — kaam overtime count hoga
+              Today is not a working day — your hours will count as overtime
             </p>
           )}
-          {/* ── Window khula hai to deadline pata ho ── */}
+          {/* ── Window is open, so show the deadline ── */}
           {status === "idle" && checkinWindow?.enforced && checkinWindow.open && (
             <p className="text-gray-500 text-xs">
-              Check-in {checkinWindow.opens_at} – {checkinWindow.closes_at} tak
-              hi ho sakta hai
+              Check-in is only possible between {checkinWindow.opens_at} and{" "}
+              {checkinWindow.closes_at}
             </p>
           )}
-          {/* ── Kal ka session abhi khula ── */}
+          {/* ── Yesterday's session is still open ── */}
           {todayInfo?.is_previous_day_session && (
             <p className="text-yellow-400 text-xs">
-              {todayInfo.date} ka session abhi khula hai — check-out karein
+              Your session from {todayInfo.date} is still open — please check out
             </p>
           )}
 
-          {/* ── Raat ki shift: calendar date aur work day alag hote hain ── */}
+          {/* ── Night shift: calendar date and work day differ ── */}
           {todayInfo?.is_overnight_shift &&
             todayInfo.work_date !== todayInfo.server_date && (
               <p className="text-sky-400 text-xs">
-                Raat ki shift — yeh attendance{" "}
-                <b>{prettyWorkDate(todayInfo.work_date)}</b> ki gini jayegi
-                (shift usi din shuru hui thi)
+                Night shift — this attendance counts against{" "}
+                <b>{prettyWorkDate(todayInfo.work_date)}</b> (the day the shift
+                started)
               </p>
             )}
         </div>
@@ -1203,13 +1204,14 @@ export default function EmployeeAttendance() {
         <div className="w-full flex flex-col gap-3 mt-2">
           {status === "idle" &&
             (checkinBlocked ? (
-              // ──── Shift ke bahar — button hi disable, error baad mein nahi ────
+              // ──── Outside the shift — disable the button up front, do not
+              //      wait to show an error afterwards ────
               <div className="w-full flex flex-col items-center gap-2">
                 <button
                   disabled
                   className="w-full py-2.5 rounded-lg font-medium bg-gray-700 text-gray-400 cursor-not-allowed"
                 >
-                  Check In band hai
+                  Check-in closed
                 </button>
                 <p
                   className={`text-xs text-center ${
@@ -1313,7 +1315,7 @@ export default function EmployeeAttendance() {
         actions={
           <IconButton
             icon={RefreshCw}
-            label="Dobara load karein"
+            label="Reload"
             onClick={fetchHistory}
           />
         }
@@ -1321,8 +1323,8 @@ export default function EmployeeAttendance() {
         {history.length === 0 ? (
           <EmptyState
             icon={CalendarDays}
-            title="Abhi koi record nahi"
-            hint="Pehla check-in karte hi aap ka din yahan aa jayega."
+            title="No records yet"
+            hint="Your day will appear here as soon as you check in for the first time."
           />
         ) : (
           <>
@@ -1400,7 +1402,7 @@ export default function EmployeeAttendance() {
                           )}
                           {item.is_early_checkout && (
                             <span
-                              title="Shift end se pehle check-out"
+                              title="Checked out before the shift ended"
                               className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-400"
                             >
                               Early {formatMinutes(item.early_checkout_minutes)}

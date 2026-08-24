@@ -43,3 +43,22 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     brightness(95%) contrast(90%);
   cursor: pointer;
 }
+
+/* ===== Native <select> option list =====
+   The browser paints a <select>'s option list with the operating system,
+   not with our CSS. On our dark panels the popup came out white while the
+   inherited text stayed white — every choice was invisible until hovered.
+
+   `color-scheme: dark` alone fixes this on some platforms and not on
+   others, so the colours are stated outright. The Payroll and Leave tabs
+   use the kit's own <Select> (plain DOM, fully styled); this rule covers
+   the remaining native ones so the same bug cannot come back there. */
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #0b100e;
+  color: #e5e7eb;
+}

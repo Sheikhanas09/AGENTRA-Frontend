@@ -1,13 +1,13 @@
 /**
  * Design tokens
  * ─────────────
- * Rang yahan rehte hain, components mein nahi. Alag file is liye ke
- * Vite ka fast-refresh sirf usi file mein chalta hai jo *sirf* components
- * export kare — constants saath rakhne se poora module reload hota hai.
+ * The colours live here, not in the components. A separate file because
+ * Vite's fast refresh only works in a file that exports *only* components —
+ * keeping constants alongside them forces a full module reload.
  *
- * ═══ STATUS KE RANG MEHFOOZ HAIN ═══
- * green/amber/red/sky sirf HAALAT batane ke liye hain — sajawat ke liye
- * kabhi nahi. Warna "laal" ka matlab hi khatam ho jata hai.
+ * ═══ STATUS COLOURS ARE RESERVED ═══
+ * green/amber/red/sky exist to convey STATE — never for decoration.
+ * Otherwise "red" stops meaning anything at all.
  */
 
 export const ACCENT = "#05DC7F";

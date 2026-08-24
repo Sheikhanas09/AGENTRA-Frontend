@@ -7,6 +7,7 @@ import DashboardTab from "./DashboardTab";
 import EmployeeAttendance from "./EmployeeAttendance";
 import EmployeeInterviewsTab from "./EmployeeInterviewsTab";
 import EmployeeLeave from "./EmployeeLeave";
+import EmployeePayroll from "./EmployeePayroll";
 import HRChatbot from "./HrChatBot";
 
 import {
@@ -21,7 +22,7 @@ import {
 export default function EmployeeDashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
 
-  // ──── Login par localStorage mein aata hai — pehle hardcoded tha ────
+  // ──── Comes from localStorage at login — used to be hardcoded ────
   const fullName = localStorage.getItem("full_name") || "Employee";
   const department = localStorage.getItem("department") || "Employee";
   const initials = fullName
@@ -49,7 +50,7 @@ export default function EmployeeDashboard() {
     Attendance: <EmployeeAttendance />,
     Interviews: <EmployeeInterviewsTab />,
     Leave: <EmployeeLeave />,
-    Payroll: <div className="text-white">Payroll Module</div>,
+    Payroll: <EmployeePayroll />,
   };
 
   return (

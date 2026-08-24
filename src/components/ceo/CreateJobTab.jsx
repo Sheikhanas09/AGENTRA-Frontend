@@ -10,7 +10,7 @@ export default function CreateJobTab() {
     department: "",
     skills: "",
     salary_range: "",
-    additional_info: "", // ← naya
+    additional_info: "",
   });
 
   const [loading, setLoading] = useState(false);

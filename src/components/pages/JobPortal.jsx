@@ -150,8 +150,8 @@ I am writing to express my interest in the ${job.title} position at ${job.compan
           <div className="text-center py-20">
             <p className="text-gray-400 text-lg">
               {search
-                ? "Koi result nahi mila"
-                : "Abhi koi position available nahi"}
+                ? "No results found"
+                : "No positions are open right now"}
             </p>
           </div>
         )}

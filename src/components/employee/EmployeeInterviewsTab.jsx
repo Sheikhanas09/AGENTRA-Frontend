@@ -180,8 +180,8 @@ export default function EmployeeInterviewsTab() {
             <FaBell className="text-[#05DC7F]" /> My Interviews
           </h3>
           <p className="text-gray-400 text-sm mt-1">
-            Aapko {interviews.filter((i) => i.status === "today").length}{" "}
-            interview(s) aaj hain
+            You have {interviews.filter((i) => i.status === "today").length}{" "}
+            interview(s) today
           </p>
         </div>
         <button
@@ -218,7 +218,7 @@ export default function EmployeeInterviewsTab() {
         <div className="flex flex-col gap-4">
           {filtered.length === 0 && (
             <div className="text-center text-gray-400 py-10">
-              Koi interview nahi mili!
+              No interviews found
             </div>
           )}
 
@@ -356,7 +356,7 @@ export default function EmployeeInterviewsTab() {
                   Feedback Submitted!
                 </p>
                 <p className="text-gray-400 text-sm">
-                  Agent 3 ne evaluation complete kar diya!
+                  Thank you — your feedback has been recorded.
                 </p>
                 <button
                   onClick={() => setShowFeedbackModal(false)}
@@ -408,7 +408,7 @@ export default function EmployeeInterviewsTab() {
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       rows={3}
-                      placeholder="Candidate ke baare mein kuch notes..."
+                      placeholder="Any notes about the candidate..."
                       className="w-full mt-1 p-3 rounded-lg bg-black/40 text-white border border-gray-700 focus:outline-none focus:border-[#05DC7F] text-sm resize-none"
                     />
                   </div>

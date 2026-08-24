@@ -105,7 +105,7 @@ export default function Hiring() {
   const handleReject = async (candidate) => {
     if (
       !window.confirm(
-        `Kya aap ${candidate.full_name} ko reject karna chahte hain?`,
+        `Are you sure you want to reject ${candidate.full_name}?`,
       )
     )
       return;
@@ -445,7 +445,7 @@ export default function Hiring() {
                         </button>
                       )}
 
-                    {/* Reject Button — sab pe dikhega except hired/rejected */}
+                    {/* Reject button — shown on all except hired/rejected */}
                     {!candidate.hired && !candidate.rejected && (
                       <button
                         onClick={() => handleReject(candidate)}

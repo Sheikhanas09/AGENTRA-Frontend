@@ -98,7 +98,7 @@ export default function AllCompanies() {
     }
   };
 
-  // ──── Yeh naya add hua ────
+  // ──── Newly added ────
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure? This CEO will be permanently deleted!"))
       return;

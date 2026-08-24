@@ -175,10 +175,10 @@ export default function ShortlistedTab() {
         setScheduleSuccess(data);
         fetchShortlisted(selectedJobId);
       } else {
-        alert(`Error: ${data.detail || "Schedule nahi ho saka"}`);
+        alert(`Error: ${data.detail || "Could not schedule the interview"}`);
       }
     } catch (err) {
-      alert("Server se connection nahi ho saka");
+      alert("Could not connect to the server");
     }
     setScheduling(false);
   };

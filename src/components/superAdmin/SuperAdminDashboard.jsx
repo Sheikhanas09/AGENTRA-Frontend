@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ← naya
+import { useNavigate } from "react-router-dom";
 import Layout from "../layout/Layout";
 import { FaTachometerAlt, FaSignOutAlt } from "react-icons/fa";
 import { HiBuildingOffice2 } from "react-icons/hi2";
@@ -10,9 +10,9 @@ import AllCompanies from "./AllCompanies";
 
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const navigate = useNavigate(); // ← naya
+  const navigate = useNavigate();
 
-  // ──── Real name localStorage se ────
+  // ──── The real name, from localStorage ────
   const fullName = localStorage.getItem("full_name") || "Super Admin";
   const initials = fullName
     .split(" ")

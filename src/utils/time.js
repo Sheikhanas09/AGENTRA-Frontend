@@ -1,16 +1,16 @@
 /**
- * Waqt ki formatting
+ * Time formatting
  * ──────────────────
- * Backend har jagah MINUTES bhejta hai (late_by_minutes, overtime_minutes,
+ * The backend sends MINUTES everywhere (late_by_minutes, overtime_minutes,
  * undertime_minutes, early_checkout_minutes, total_pause_minutes) — wahi
- * sahi hai, raw data minutes mein rehna chahiye.
+ * right — the raw data should stay in minutes.
  *
- * Magar "125 min late" parhne mein mushkil hai. Yahan sirf DIKHANE ke liye
- * badalte hain: 60 se kam ho to minutes, warna ghante.
+ * But "125 min late" is hard to read. This converts it for DISPLAY only:
+ * under 60 stays in minutes, otherwise hours.
  */
 
 /**
- * Minutes ko parhne layak banao.
+ * Make a minute count readable.
  *
  *    45  ->  "45m"
  *    60  ->  "1h"
@@ -19,8 +19,8 @@
  *
  * @param {number} mins
  * @param {object} [opts]
- * @param {string} [opts.empty="—"]   0 / null par kya dikhana hai
- * @param {boolean} [opts.short=false] "2h 5m" ki jagah sirf "2h" (tang jagah)
+ * @param {string} [opts.empty="—"]   what to show for 0 / null
+ * @param {boolean} [opts.short=false] just "2h" instead of "2h 5m" (tight space)
  */
 export function formatMinutes(mins, opts = {}) {
   const { empty = "—", short = false } = opts;
@@ -38,9 +38,9 @@ export function formatMinutes(mins, opts = {}) {
 }
 
 /**
- * Ghanton ki tafseel jahan poora jumla likhna ho
+ * A spelled-out form of hours, for full sentences
  *    45  ->  "45 minute"
- *   125  ->  "2 ghante 5 minute"
+ *   125  ->  "2 hours 5 minutes"
  */
 export function formatMinutesLong(mins) {
   const total = Math.round(Number(mins) || 0);

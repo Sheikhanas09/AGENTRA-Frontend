@@ -8,6 +8,7 @@ import {
   FaEnvelope,
   FaPhone,
   FaBuilding,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 
 function generatePassword(length = 10) {
@@ -28,15 +29,22 @@ export default function CreateUser() {
     department: "Frontend Developer",
     joiningDate: "",
     password: "",
+    // ──── Salary — set at hiring time ────
+    baseSalary: "",
+    houseAllowance: "",
+    transportAllowance: "",
+    medicalAllowance: "",
+    otherAllowances: "",
   });
 
   const [autoPassword, setAutoPassword] = useState(true);
   const [createdUsers, setCreatedUsers] = useState([]);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState(""); // ← naya
-  const [loading, setLoading] = useState(false); // ← naya
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [warning, setWarning] = useState(""); // employee created, salary not
 
-  const token = localStorage.getItem("token"); // ← naya
+  const token = localStorage.getItem("token");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -46,12 +54,18 @@ export default function CreateUser() {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     setError("");
+    setWarning("");
 
     if (!formData.name || !formData.email)
       return setError("Name and email are required.");
 
     const finalPassword = autoPassword ? generatePassword() : formData.password;
     if (!finalPassword) return setError("Password is required.");
+
+    // Base salary is optional, but if given it must be valid
+    const base = Number(formData.baseSalary);
+    if (formData.baseSalary !== "" && !(base > 0))
+      return setError("Base salary must be greater than zero.");
 
     setLoading(true);
 
@@ -84,7 +98,50 @@ export default function CreateUser() {
         return;
       }
 
-      // Success — list mein add karo
+      // ──── The salary structure ────
+      // The employee already exists. If this call fails we do not roll
+      // them back — we simply tell the CEO to set the salary from the
+      // Payroll tab. Otherwise the person is created and it still says
+      // "failed".
+      let salarySaved = false;
+      if (base > 0) {
+        try {
+          const sres = await fetch(
+            "http://127.0.0.1:8000/payroll/salary-structure",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                employee_id: data.employee_id,
+                base_salary: base,
+                house_allowance: Number(formData.houseAllowance) || 0,
+                transport_allowance: Number(formData.transportAllowance) || 0,
+                medical_allowance: Number(formData.medicalAllowance) || 0,
+                other_allowances: Number(formData.otherAllowances) || 0,
+                effective_from:
+                  formData.joiningDate ||
+                  new Date().toISOString().split("T")[0],
+              }),
+            },
+          );
+          salarySaved = sres.ok;
+          if (!sres.ok) {
+            const sdata = await sres.json().catch(() => ({}));
+            setWarning(
+              `${data.full_name} has been created, but the salary could not be saved (${sdata.detail || "unknown error"}). Set it from Payroll → Salaries.`,
+            );
+          }
+        } catch {
+          setWarning(
+            `${data.full_name} has been created, but the salary could not be saved. Set it from Payroll → Salaries.`,
+          );
+        }
+      }
+
+      // Success — add to the list
       setCreatedUsers([
         {
           id: data.employee_id,
@@ -92,6 +149,7 @@ export default function CreateUser() {
           email: data.email,
           department: formData.department,
           password: data.password,
+          salary: salarySaved ? base : null,
         },
         ...createdUsers,
       ]);
@@ -107,8 +165,13 @@ export default function CreateUser() {
         department: "Frontend Developer",
         joiningDate: "",
         password: "",
+        baseSalary: "",
+        houseAllowance: "",
+        transportAllowance: "",
+        medicalAllowance: "",
+        otherAllowances: "",
       });
-    } catch (err) {
+    } catch {
       setError("Unable to connect to the server.");
     }
 
@@ -127,6 +190,13 @@ export default function CreateUser() {
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500 text-red-400 text-sm">
             {error}
+          </div>
+        )}
+
+        {/* ──── Warning: employee created, salary not ──── */}
+        {warning && (
+          <div className="mb-4 p-3 rounded-lg bg-amber-500/15 border border-amber-500/60 text-amber-300 text-sm">
+            {warning}
           </div>
         )}
 
@@ -216,6 +286,77 @@ export default function CreateUser() {
             />
           </div>
 
+          {/* ──── SALARY — set at hiring time ──── */}
+          <div className="md:col-span-2 border-t border-gray-700 pt-6">
+            <div className="flex flex-wrap items-center gap-3 mb-1">
+              <h3 className="text-white font-semibold flex items-center gap-2">
+                <FaMoneyBillWave className="text-[#05DC7F]" />
+                Salary Structure
+              </h3>
+              <span className="text-xs text-gray-500">optional</span>
+            </div>
+            <p className="text-gray-500 text-xs mb-4">
+              Set it now and this employee is included in payroll from the very
+              first month. You can change it later from Payroll → Salaries.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="w-full">
+                <label className="text-gray-400 text-sm">
+                  Base Salary (PKR)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  name="baseSalary"
+                  value={formData.baseSalary}
+                  onChange={handleChange}
+                  className="input-style"
+                  placeholder="e.g. 100000"
+                />
+              </div>
+
+              {[
+                ["houseAllowance", "House Allowance"],
+                ["transportAllowance", "Transport Allowance"],
+                ["medicalAllowance", "Medical Allowance"],
+                ["otherAllowances", "Other Allowances"],
+              ].map(([key, label]) => (
+                <div className="w-full" key={key}>
+                  <label className="text-gray-400 text-sm">{label}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    name={key}
+                    value={formData[key]}
+                    onChange={handleChange}
+                    className="input-style"
+                    placeholder="0"
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* The gross total — so the CEO sees it immediately */}
+            {Number(formData.baseSalary) > 0 && (
+              <div className="mt-4 text-sm text-gray-400">
+                Monthly gross:{" "}
+                <span className="text-[#05DC7F] font-semibold">
+                  PKR{" "}
+                  {(
+                    Number(formData.baseSalary) +
+                    (Number(formData.houseAllowance) || 0) +
+                    (Number(formData.transportAllowance) || 0) +
+                    (Number(formData.medicalAllowance) || 0) +
+                    (Number(formData.otherAllowances) || 0)
+                  ).toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+
           {/* PASSWORD */}
           <div className="md:col-span-2 flex flex-col gap-4 border-t border-gray-700 pt-6">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
@@ -284,6 +425,16 @@ export default function CreateUser() {
                     {user.email} • {user.department}
                   </p>
                   <p className="text-gray-500 text-xs">ID: {user.id}</p>
+                  {user.salary ? (
+                    <p className="text-[#05DC7F] text-xs mt-1 flex items-center gap-1.5">
+                      <FaMoneyBillWave />
+                      Base PKR {user.salary.toLocaleString()} • payroll ready
+                    </p>
+                  ) : (
+                    <p className="text-amber-400/80 text-xs mt-1">
+                      Salary not set — add it from Payroll → Salaries
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1 text-right">
                   <p className="text-gray-400 text-xs">Password:</p>

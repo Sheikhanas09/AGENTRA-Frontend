@@ -78,7 +78,7 @@ export default function HiredEmployeesTab() {
 
   const handleFire = async (emp) => {
     if (
-      !window.confirm(`Kya aap ${emp.full_name} ko remove karna chahte hain?`)
+      !window.confirm(`Are you sure you want to remove ${emp.full_name}?`)
     )
       return;
     setFireLoading(emp.id);
@@ -271,7 +271,7 @@ export default function HiredEmployeesTab() {
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">
           <FaCheckCircle className="text-red-400" size={18} />
           <p className="text-red-400 font-medium">
-            {fireSuccess} remove ho gaya!
+            {fireSuccess} has been removed
           </p>
         </div>
       )}
@@ -297,7 +297,7 @@ export default function HiredEmployeesTab() {
           <div className="flex flex-col divide-y divide-gray-800">
             {currentEmployees.length === 0 && (
               <div className="text-center text-gray-400 py-10">
-                Koi employee nahi mila!
+                No employees found
               </div>
             )}
 
@@ -398,7 +398,7 @@ export default function HiredEmployeesTab() {
           <div className="flex flex-col divide-y divide-gray-800">
             {currentEmployees.length === 0 && (
               <div className="text-center text-gray-400 py-10">
-                Koi hired employee nahi mila!
+                No hired employees found
               </div>
             )}
 

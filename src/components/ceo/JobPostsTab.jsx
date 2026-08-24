@@ -10,7 +10,7 @@ export default function JobPostsTab({ setSelectedJob }) {
 
   const token = localStorage.getItem("token");
 
-  // ──── Real jobs fetch karo ────
+  // ──── Fetch the real jobs ────
   const fetchJobs = async () => {
     setLoading(true);
     try {

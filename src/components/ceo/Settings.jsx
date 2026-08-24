@@ -15,9 +15,9 @@ import {
 } from "react-icons/fa";
 
 // ──────────────────────────────────────────
-// Shift ka hisaab — 12-hour label + overnight detect
+// Shift arithmetic — a 12-hour label plus overnight detection
 // ──────────────────────────────────────────
-// Backend bhi bilkul yehi logic use karta hai (utils/workpolicy.py)
+// The backend uses exactly this logic too (utils/workpolicy.py)
 function shiftInfo(start, end) {
   const toMin = (v) => {
     const parts = String(v || "").split(":");
@@ -47,13 +47,13 @@ function shiftInfo(start, end) {
     overnight,
     startLabel: label(s),
     endLabel: label(e),
-    lengthLabel: lm ? `${lh}h ${lm}m` : `${lh} ghante`,
+    lengthLabel: lm ? `${lh}h ${lm}m` : `${lh} hours`,
     tooLong: len > 12 * 60,
   };
 }
 
 // ──────────────────────────────────────────
-// Extraction panel ke liye
+// For the extraction panel
 // ──────────────────────────────────────────
 const FIELD_LABELS = {
   shift_start: "Shift Start",
@@ -82,7 +82,7 @@ function to12hLabel(hhmm) {
   return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-// Break kitni der ki hai — aadhi raat paar kar jaye to bhi theek
+// How long the break is — correct even across midnight
 function breakSpan(start, end) {
   const toMin = (v) => {
     const p = String(v || "").split(":");
@@ -137,12 +137,12 @@ export default function Settings() {
   const [uploadingPolicy, setUploadingPolicy] = useState(false);
   const [policyStatus, setPolicyStatus] = useState(null);
 
-  // ──── Uploaded policies ki list + delete ────
+  // ──── The list of uploaded policies + delete ────
   const [policyList, setPolicyList] = useState([]);
   const [deletingPolicy, setDeletingPolicy] = useState(null);
   const [activatingPolicy, setActivatingPolicy] = useState(null);
 
-  // ──── Policy se working hours ki tajweez ────
+  // ──── Working-hours suggestions from the policy ────
   // {fields: {name: {value, source_quote, confidence, current_value, changes}}, warnings}
   const [extraction, setExtraction] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -219,9 +219,9 @@ export default function Settings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ──── Work Policy server se ────
-  // Alag function is liye ke policy document upload hone ke baad agent
-  // khud fields bhar deta hai — tab form ko dobara load karna parta hai
+  // ──── Work policy from the server ────
+  // A separate function because after a policy upload the agent fills the
+  // fields itself — at which point the form has to be reloaded
   const loadWorkPolicy = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/settings/work-policy", {
@@ -234,10 +234,10 @@ export default function Settings() {
     }
   };
 
-  // ──── Pichhli policy se kya laga tha ────
-  // Upload par yeh sab khud ho chuka hota hai. Settings dobara kholne par
-  // bhi CEO ko dikhna chahiye ke kaunsi field document se aayi thi —
-  // isi liye natija active policy ke saath wapas aata hai.
+  // ──── What the previous policy applied ────
+  // All of this already happened on upload. Reopening Settings should
+  // still show the CEO which field came from the document — which is why
+  // the result comes back alongside the active policy.
   const loadActivePolicyResult = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/settings/policy/active", {
@@ -251,17 +251,17 @@ export default function Settings() {
       if (data.policy.work_policy) {
         setExtraction({ ...data.policy.work_policy, policy_label: label });
       } else {
-        // Document maujood hai magar us se working hours nikale hi nahi
-        // gaye — yani wo is agent ke banne se PEHLE upload hua tha.
-        // Yehi wo soorat hai jahan CEO ke paas koi aur rasta nahi,
-        // is liye yahan "Dobara koshish" ka button dikhta hai.
+        // The document exists but no working hours were ever extracted
+        // from it — meaning it was uploaded BEFORE this agent existed.
+        // This is the one case where the CEO has no other route, which is
+        // why a "Try again" button appears here.
         setExtraction({
           ran: false,
           policy_label: label,
-          title: "Is document se working hours abhi nahi nikale gaye",
+          title: "No working hours have been extracted from this document yet",
           reason:
-            "Yeh document working hours wale agent se pehle upload hua tha. " +
-            "Dobara koshish karein — ya nayi policy upload karein, wahan yeh khud ho jata hai.",
+            "This document was uploaded before the working-hours agent existed. " +
+            "Try again — or upload a new policy, where this happens automatically.",
         });
       }
     } catch (e) {
@@ -269,9 +269,9 @@ export default function Settings() {
     }
   };
 
-  // ──── Dobara koshish ────
-  // Yeh button sirf tab dikhta hai jab upload ke waqt agent FAIL hua ho.
-  // Aam soorat mein kuch dabana nahi parta.
+  // ──── Try again ────
+  // This button only appears when the agent FAILED during the upload.
+  // Normally nothing has to be pressed at all.
   const handleExtractWorkPolicy = async () => {
     setError("");
     setSuccess("");
@@ -284,7 +284,7 @@ export default function Settings() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Policy parhi nahi ja saki");
+        setError(data.detail || "The policy could not be read");
         setExtracting(false);
         return;
       }
@@ -293,10 +293,10 @@ export default function Settings() {
 
       if (!data.found_count) {
         setError(
-          "Policy document mein working hours nahi mile — fields waise hi rahin",
+          "No working hours were found in the policy document — the fields are unchanged",
         );
       } else {
-        // Sirf wo fields badlo jo document mein MILE
+        // Only change the fields that were FOUND in the document
         setWorkPolicy((prev) => {
           const next = { ...prev };
           Object.entries(data.fields).forEach(([name, item]) => {
@@ -305,7 +305,7 @@ export default function Settings() {
           return next;
         });
         setSuccess(
-          `${data.found_count} field policy se bhar di gayin — dekh lein, phir Save karein`,
+          `${data.found_count} field(s) filled in from the policy — review them, then Save`,
         );
       }
     } catch {
@@ -314,7 +314,7 @@ export default function Settings() {
     setExtracting(false);
   };
 
-  // ──── Uploaded policies ki list ────
+  // ──── The list of uploaded policies ────
   const loadPolicyList = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/settings/policy/list", {
@@ -331,9 +331,9 @@ export default function Settings() {
   const handleDeletePolicy = async (policy) => {
     const label = policy.policy_label || policy.file_name;
     const warning = policy.is_active
-      ? `"${label}" ACTIVE policy hai.\n\nDelete karne par uske vector chunks bhi hat jayenge — ` +
-        `Leave Agent policy parh nahi payega aur sari requests aap ke paas aayengi.\n\nDelete karein?`
-      : `"${label}" delete karein?`;
+      ? `"${label}" is the ACTIVE policy.\n\nDeleting it also removes its vector chunks — ` +
+        `the Leave Agent will not be able to read the policy and every request will come to you.\n\nDelete it?`
+      : `Delete "${label}"?`;
 
     if (!window.confirm(warning)) return;
 
@@ -351,7 +351,7 @@ export default function Settings() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Delete nahi ho payi");
+        setError(data.detail || "Could not delete");
       } else {
         setSuccess(data.message + (data.note ? ` — ${data.note}` : ""));
         await loadPolicyList();
@@ -362,17 +362,17 @@ export default function Settings() {
     setDeletingPolicy(null);
   };
 
-  // Jis field ki value document se aayi, us par nishan — CEO ko pata
-  // rahe ke yeh usne set ki thi ya agent ne policy se nikali
+  // A marker on any field whose value came from the document — so the CEO
+  // knows whether they set it or the agent extracted it from the policy
   const FromPolicy = ({ name }) => {
     const item = extraction?.fields?.[name];
     if (!item) return null;
     return (
       <span
-        title={item.source_quote || "Policy document se"}
+        title={item.source_quote || "From the policy document"}
         className="px-1.5 py-0.5 rounded text-[10px] bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/25 cursor-help"
       >
-        policy se
+        from policy
       </span>
     );
   };
@@ -427,7 +427,7 @@ export default function Settings() {
 
     // ──── Validation ────
     if (!officeLocation.latitude || !officeLocation.longitude) {
-      setError("Pehle location set karo — 'Use Current Location' click karo!");
+      setError("Set the location first — click 'Use Current Location'");
       setSavingOffice(false);
       return;
     }
@@ -527,7 +527,7 @@ export default function Settings() {
   // ──── Upload Policy Document ────
   const handleUploadPolicy = async () => {
     if (!policyFile) {
-      setError("Pehle file select karo!");
+      setError("Please select a file first");
       return;
     }
     setError("");
@@ -558,10 +558,10 @@ export default function Settings() {
     setUploadingPolicy(false);
   };
 
-  // ──── Indexing khatam hone ka intezar ────
-  // Upload aur "purani policy dobara activate" — dono ka anjaam ek hi
-  // hai (index → leave types → working hours), is liye intezar aur
-  // natija dikhane ka kaam bhi ek hi jagah.
+  // ──── Wait for indexing to finish ────
+  // An upload and "reactivate an old policy" end in the same place
+  // (index → leave types → working hours), so the waiting and the
+  // reporting live in one place too.
   const watchIndexing = (policyId, label, { clearFile = false } = {}) => {
     const poll = setInterval(async () => {
       try {
@@ -575,47 +575,47 @@ export default function Settings() {
         if (s.status === "active") {
           clearInterval(poll);
 
-          // ──── Agent ne types khud laga di hain — CEO ko batao ────
+          // ──── The agent applied the types itself — tell the CEO ────
           const lt = s.leave_types;
           let extra = "";
           if (lt?.ran) {
             const bits = [];
             if (lt.applied?.length) bits.push(`${lt.applied.length} type laagu`);
             if (lt.created?.length)
-              bits.push(`${lt.created.join(", ")} nayi bani`);
+              bits.push(`${lt.created.join(", ")} created`);
             if (lt.disabled?.length)
-              bits.push(`${lt.disabled.join(", ")} band ki gayin`);
+              bits.push(`${lt.disabled.join(", ")} disabled`);
             if (lt.balances_synced)
               bits.push(`${lt.balances_synced} employee balance update`);
             extra = ` — Leave types: ${bits.join(", ")}`;
           } else if (lt?.reason) {
-            extra = ` — Leave types nahi badlin: ${lt.reason}`;
+            extra = ` — leave types unchanged: ${lt.reason}`;
           }
 
-          // ──── Working hours bhi khud lag gaye ────
+          // ──── The working hours were applied automatically too ────
           const wp = s.work_policy;
           if (wp) {
-            // Panel foran dikh jaye — CEO ko kuch dabana nahi parta
+            // The panel shows immediately — the CEO presses nothing
             setExtraction({ ...wp, policy_label: label });
           }
           if (wp?.ran) {
             const n = Object.keys(wp.fields || {}).length;
             extra += ` — Working hours: ${n} field laagu`;
             if (wp.skipped?.length) extra += `, ${wp.skipped.length} manual`;
-            // Form purani values dikha raha hoga — nayi le aao
+            // The form is still showing the old values — fetch the new ones
             await loadWorkPolicy();
           } else if (wp?.reason) {
-            extra += ` — Working hours nahi badle: ${wp.reason}`;
+            extra += ` — working hours unchanged: ${wp.reason}`;
           }
 
-          setSuccess(`"${label}" ab active hai — ${s.chunks_indexed} chunks.${extra}`);
+          setSuccess(`"${label}" is now active — ${s.chunks_indexed} chunks.${extra}`);
           if (clearFile) setPolicyFile(null);
           await loadPolicyList();
         }
 
         if (s.status === "failed") {
           clearInterval(poll);
-          setError(`"${label}" index nahi ho payi`);
+          setError(`"${label}" could not be indexed`);
           await loadPolicyList();
         }
       } catch {
@@ -624,19 +624,19 @@ export default function Settings() {
     }, 3000);
   };
 
-  // ──── Purani policy dobara active karo ────
-  // File disk par mehfooz hai — dobara upload karne ki koi zarurat nahi.
+  // ──── Reactivate an earlier policy ────
+  // The file is safe on disk — there is no need to upload it again.
   const handleActivatePolicy = async (policy) => {
     const label = policy.policy_label || policy.file_name;
 
     if (
       !window.confirm(
-        `"${label}" ko active karein?\n\n` +
-          `· Yeh dobara index hogi (purane chunks hat jayenge)\n` +
-          `· Leave types aur Working Hours ISI document se dobara lagenge\n` +
-          `· Abhi wali policy sirf inactive hogi — delete nahi hogi\n\n` +
-          `Aap ne jo values manually badli hain wo is document ke mutabiq ` +
-          `wapas set ho sakti hain.`,
+        `Activate "${label}"?\n\n` +
+          `· It will be reindexed (the old chunks are removed)\n` +
+          `· Leave types and working hours will be reapplied from THIS document\n` +
+          `· The current policy is only made inactive — it is not deleted\n\n` +
+          `Any values you changed manually may be reset to match this ` +
+          `document.`,
       )
     )
       return;
@@ -653,7 +653,7 @@ export default function Settings() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Activate nahi ho payi");
+        setError(data.detail || "Could not activate");
       } else {
         setPolicyStatus("processing");
         await loadPolicyList();
@@ -777,11 +777,11 @@ export default function Settings() {
 
           <p className="text-gray-500 text-xs mb-5">
             {policyList.length > 0
-              ? "Policy document upload karte hi yeh fields khud bhar jati hain. Jo document mein na ho wo aap yahan set karein."
-              : "Policy Document tab se document upload karein to yeh fields khud bhar jayengi."}
+              ? "These fields fill in automatically when a policy document is uploaded. Set anything the document does not cover here."
+              : "Upload a document from the Policy Document tab and these fields will fill in automatically."}
           </p>
 
-          {/* ──── Document se kya laga — CEO khud tasdeeq kare ──── */}
+          {/* ──── What the document applied — for the CEO to verify ──── */}
           {extraction && (
             <div
               className={`mb-6 rounded-xl border p-4 ${
@@ -796,15 +796,15 @@ export default function Settings() {
                     <p className="text-[#05DC7F] text-sm font-semibold">
                       {extraction.found_count ??
                         Object.keys(extraction.fields || {}).length}{" "}
-                      field policy se{" "}
-                      {extraction.saved ? "khud lag gayin" : "bhar di gayin"} —{" "}
+                      field(s) from the policy were{" "}
+                      {extraction.saved ? "applied automatically" : "filled in"} —{" "}
                       <span className="text-gray-400 font-normal">
                         {extraction.policy_label}
                       </span>
                     </p>
                   ) : (
                     <p className="text-yellow-400 text-sm font-semibold">
-                      {extraction.title || "Policy se working hours nahi nikle"}
+                      {extraction.title || "No working hours were extracted from the policy"}
                     </p>
                   )}
 
@@ -816,14 +816,14 @@ export default function Settings() {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {/* Sirf NAAKAMI par — aam soorat mein kuch dabana nahi parta */}
+                  {/* Only on FAILURE — normally nothing has to be pressed */}
                   {!extraction.ran && policyList.length > 0 && (
                     <button
                       onClick={handleExtractWorkPolicy}
                       disabled={extracting}
                       className="px-3 py-1.5 rounded-lg bg-yellow-500/15 text-yellow-300 border border-yellow-500/30 text-xs hover:bg-yellow-500/25 transition disabled:opacity-40"
                     >
-                      {extracting ? "Parh raha hai..." : "Dobara koshish"}
+                      {extracting ? "Reading..." : "Try again"}
                     </button>
                   )}
                   <button
@@ -861,7 +861,7 @@ export default function Settings() {
                               : "bg-yellow-500/20 text-yellow-400"
                           }`}
                         >
-                          {item.confidence === "high" ? "saaf likha" : "andaza"}
+                          {item.confidence === "high" ? "stated" : "inferred"}
                         </span>
                       </div>
                       {item.source_quote && (
@@ -877,7 +877,7 @@ export default function Settings() {
               {extraction.warnings?.length > 0 && (
                 <div className="mt-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-2.5">
                   <p className="text-yellow-400 text-xs font-semibold mb-1">
-                    Yeh cheezein khud dekh lein:
+                    Please check these yourself:
                   </p>
                   <ul className="text-yellow-300/80 text-xs list-disc list-inside">
                     {extraction.warnings.map((w, i) => (
@@ -891,22 +891,22 @@ export default function Settings() {
                 <p className="text-gray-500 text-xs mt-3">
                   {extraction.saved ? (
                     <>
-                      Yeh document upload hote hi khud lag gaya tha. Koi value
-                      theek nahi lagti to neeche badal kar{" "}
-                      <span className="text-[#05DC7F]">Save</span> kar dein.
+                      This was applied automatically when the document was
+                      uploaded. If a value looks wrong, change it below and{" "}
+                      press <span className="text-[#05DC7F]">Save</span>.
                       {extraction.skipped?.length > 0 && (
                         <>
                           {" "}
-                          Baqi {extraction.skipped.length} field document mein
-                          nahi thi — wo aap ki set ki hui hai.
+                          The other {extraction.skipped.length} field(s) were
+                          not in the document — those are yours.
                         </>
                       )}
                     </>
                   ) : (
                     <>
-                      Yeh sirf form mein bhara gaya hai — neeche{" "}
+                      This has only been filled into the form — below{" "}
                       <span className="text-[#05DC7F]">Save</span> dabane tak
-                      kuch mehfooz nahi hua.
+                      nothing has been saved.
                     </>
                   )}
                 </p>
@@ -966,10 +966,10 @@ export default function Settings() {
               />
             </div>
 
-            {/* ── Shift ka preview ──
-                12-hour mein dikhana zaroori hai: time input 24-hour value
-                deta hai, aur AM/PM ki ghalti (5 PM ki jagah 05:00 AM)
-                warna nazar hi nahi aati. */}
+            {/* ── Shift preview ──
+                Showing it in 12-hour form matters: the time input gives a
+                24-hour value, and an AM/PM mistake (05:00 AM instead of
+                5 PM) is otherwise invisible. */}
             <div className="md:col-span-2 -mt-1">
               {(() => {
                 const s = shiftInfo(
@@ -987,8 +987,8 @@ export default function Settings() {
                   >
                     <p className={s.overnight ? "text-amber-400" : "text-[#05DC7F]"}>
                       {s.overnight ? "⚠ " : "✓ "}
-                      <b>{s.startLabel}</b> se <b>{s.endLabel}</b>
-                      {s.overnight && " (agle din)"}
+                      <b>{s.startLabel}</b> to <b>{s.endLabel}</b>
+                      {s.overnight && " (next day)"}
                       <span className="text-gray-400 font-normal">
                         {" "}
                         — {s.lengthLabel}
@@ -996,16 +996,15 @@ export default function Settings() {
                     </p>
                     {s.overnight && (
                       <p className="text-gray-400 text-xs mt-1.5">
-                        Yeh <b>raat bhar ki shift</b> hai — aadhi raat paar
-                        karti hai aur agle din khatam hoti hai. Agar aap ka
-                        matlab din ki shift tha to <b>AM / PM</b> dobara
-                        check karein.
+                        This is an <b>overnight shift</b> — it crosses
+                        midnight and ends the next day. If you meant a day
+                        shift, check the <b>AM / PM</b> again.
                       </p>
                     )}
                     {s.tooLong && (
                       <p className="text-amber-400 text-xs mt-1.5">
-                        Shift {s.lengthLabel} ki hai — itni lambi shift aam
-                        nahi hoti, ek dafa dekh lein.
+                        The shift is {s.lengthLabel} long — that is unusually
+                        long, please double-check.
                       </p>
                     )}
                   </div>
@@ -1045,13 +1044,14 @@ export default function Settings() {
                 />
                 <span>
                   <span className="text-white text-sm font-medium inline-flex items-center gap-2">
-                    Check-in sirf shift ke darmiyan{" "}
+                    Check in only during the shift{" "}
                     <FromPolicy name="enforce_shift_window" />
                   </span>
                   <span className="block text-gray-500 text-xs mt-0.5">
-                    Shift end ({workPolicy.shift_end}) ke baad check-in band —
-                    employee us din absent rahega. Check-out par koi pabandi
-                    nahi. Non-working day pe yeh rule apply nahi hota.
+                    Check-in closes after the shift ends
+                    ({workPolicy.shift_end}) — the employee stays absent for
+                    that day. There is no restriction on check-out. This rule
+                    does not apply on a non-working day.
                   </span>
                 </span>
               </label>
@@ -1059,7 +1059,7 @@ export default function Settings() {
               {workPolicy.enforce_shift_window !== false && (
                 <div className="mt-3 pl-7">
                   <p className="text-gray-400 text-sm mb-1 flex items-center gap-2">
-                Shift se kitna pehle check-in allow (minutes) <FromPolicy name="early_checkin_grace_mins" />
+                How early check-in is allowed, before the shift (minutes) <FromPolicy name="early_checkin_grace_mins" />
               </p>
                   <input
                     type="number"
@@ -1075,9 +1075,9 @@ export default function Settings() {
                     className="w-full md:w-48 bg-black/40 border border-[#05DC7F]/30 text-white rounded-lg px-3 py-2 outline-none"
                   />
                   <p className="text-gray-500 text-xs mt-1">
-                    Window: {workPolicy.shift_start} se{" "}
-                    {workPolicy.early_checkin_grace_mins ?? 60} min pehle →{" "}
-                    {workPolicy.shift_end} tak. 0 kar do to bilkul strict.
+                    Window: from {workPolicy.early_checkin_grace_mins ?? 60}{" "}
+                    min before {workPolicy.shift_start} →{" "}
+                    {workPolicy.shift_end}. Set it to 0 to be fully strict.
                   </p>
                 </div>
               )}
@@ -1086,14 +1086,14 @@ export default function Settings() {
             {/* ── Leave approval deadline ── */}
             <div className="md:col-span-2 rounded-lg border border-[#05DC7F]/20 bg-black/20 p-3">
               <p className="text-white text-sm font-medium mb-1 flex items-center gap-2">
-                Leave approval deadline (ghante){" "}
+                Leave approval deadline (hours){" "}
                 <FromPolicy name="leave_auto_approve_hours" />
               </p>
               <p className="text-gray-500 text-xs mb-2">
-                Har leave request aap ke paas aati hai. Itne ghante mein jawab
-                na dein aur employee ka balance maujood ho to request khud
-                approve ho jayegi — employee latka na rahe.{" "}
-                <b className="text-gray-400">0 = kabhi auto-approve nahi.</b>
+                Every leave request comes to you. If there is no response
+                within this many hours and the balance allows, the request
+                approves itself — so nobody is left hanging.{" "}
+                <b className="text-gray-400">0 = never auto-approve.</b>
               </p>
               <input
                 type="number"
@@ -1109,8 +1109,8 @@ export default function Settings() {
                 className="w-full md:w-48 bg-black/40 border border-[#05DC7F]/30 text-white rounded-lg px-3 py-2 outline-none"
               />
               <p className="text-gray-500 text-xs mt-1">
-                Jin leave types pe aapne manual override lagaya hai, wo kabhi
-                khud approve nahi hongi.
+                Leave types you have set a manual override on will never
+                auto-approve.
               </p>
             </div>
 
@@ -1173,8 +1173,8 @@ export default function Settings() {
               Break <FromPolicy name="break_start" />
             </p>
             <p className="text-gray-500 text-xs mb-4">
-              Employee ko apni Attendance screen par yeh dikhta hai — kab, kitni
-              der, aur kaam ke ghanton mein ginta hai ya nahi.
+              Employees see this on their own Attendance screen — when it is,
+              how long, and whether it counts towards working hours.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -1225,36 +1225,36 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Waqt diya hai to muddat usi se nikalti hai — do jagah rakhi
-                hui muddat kabhi na kabhi ek dusre se alag ho jati hai */}
+            {/* If the times are given, the duration is derived from them —
+                a duration stored in two places eventually diverges */}
             <div className="mb-4 text-sm">
               {workPolicy.break_start && workPolicy.break_end ? (
                 <p className="text-[#05DC7F]">
-                  Muqarrar break — {to12hLabel(workPolicy.break_start)} se{" "}
+                  Fixed break — {to12hLabel(workPolicy.break_start)} to{" "}
                   {to12hLabel(workPolicy.break_end)} (
                   {breakSpan(workPolicy.break_start, workPolicy.break_end)} min).
                   <span className="text-gray-500">
                     {" "}
-                    Minutes khud waqt se nikalte hain.
+                    The minutes are derived from the times.
                   </span>
                 </p>
               ) : (
                 <p className="text-gray-400">
-                  Waqt muqarrar nahi — employee{" "}
+                  No fixed time — the employee{" "}
                   <b className="text-white">
                     {workPolicy.break_minutes ?? 60} minute
                   </b>{" "}
-                  jab chahe le sakta hai.
+                  can take it whenever they like.
                   <span className="text-gray-500">
                     {" "}
-                    Waqt tay karna ho to upar dono fields bharein.
+                    To fix the time, fill in both fields above.
                   </span>
                 </p>
               )}
             </div>
 
             <p className="text-gray-400 text-sm mb-2 flex items-center gap-2">
-              Break ka hisaab <FromPolicy name="break_policy" />
+              How the break counts <FromPolicy name="break_policy" />
             </p>
             <div className="flex flex-wrap gap-3">
               {["excluded", "included"].map((bp) => (
@@ -1276,8 +1276,8 @@ export default function Settings() {
             </div>
             <p className="text-gray-500 text-xs mt-2">
               {workPolicy.break_policy === "included"
-                ? "Break ka waqt kaam mein ginta hai — net hours kam nahi hote."
-                : `Break ka waqt net hours se katta hai — ${workPolicy.min_daily_hours} ghante poore karne ke liye utni der zyada rukna hoga.`}
+                ? "Break time counts as work — net hours are not reduced."
+                : `Break time comes off the net hours — employees must stay that much longer to complete ${workPolicy.min_daily_hours} hours.`}
             </p>
           </div>
 
@@ -1316,8 +1316,8 @@ export default function Settings() {
 
             {policyList.length === 0 ? (
               <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-sm">
-                Koi policy document upload nahi hui — Leave Agent policy parh
-                nahi sakta, isliye sari leave requests aap ke paas aayengi.
+                No policy document has been uploaded — the Leave Agent cannot
+                read a policy, so every leave request will come to you.
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -1356,15 +1356,15 @@ export default function Settings() {
                         {!p.file_exists && (
                           <span className="text-yellow-500">
                             {" "}
-                            · file disk pe nahi mili
+                            · file not found on disk
                           </span>
                         )}
                       </p>
                     </div>
 
                     <div className="shrink-0 flex items-center gap-2">
-                      {/* Purani policy wapas lagane ke liye — file disk par
-                          mehfooz hai, dobara upload karne ki zarurat nahi */}
+                      {/* To restore an earlier policy — the file is safe on
+                          disk, so there is no need to upload it again */}
                       {!p.is_active && (
                         <button
                           onClick={() => handleActivatePolicy(p)}
@@ -1375,14 +1375,14 @@ export default function Settings() {
                           }
                           title={
                             p.file_exists
-                              ? "Isi document se leave types aur working hours dobara lagayein"
-                              : "File disk par nahi mili — activate nahi ho sakti"
+                              ? "Reapply leave types and working hours from this document"
+                              : "The file was not found on disk — it cannot be activated"
                           }
                           className="px-3 py-1.5 rounded-lg bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 text-xs hover:bg-[#05DC7F]/25 transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
                         >
                           <FaCheckCircle className="text-[10px]" />
                           {activatingPolicy === p.id
-                            ? "Lag rahi hai..."
+                            ? "Activating..."
                             : "Activate"}
                         </button>
                       )}
@@ -1448,7 +1448,7 @@ export default function Settings() {
           {policyStatus === "processing" && (
             <div className="mb-4 flex items-center gap-2 text-yellow-400">
               <FaSpinner className="animate-spin" />
-              <span>Policy indexing ho rahi hai... Please wait</span>
+              <span>Indexing the policy... please wait</span>
             </div>
           )}
 
@@ -1468,8 +1468,8 @@ export default function Settings() {
         <div className="p-6 bg-black/50 border border-[#05DC7F]/30 rounded-2xl">
           <h2 className="text-white text-xl font-bold mb-2">Office Location</h2>
           <p className="text-gray-400 text-sm mb-6">
-            Employee check-in ke waqt GPS se verify hoga — office radius mein
-            hai ya nahi
+            Check-ins are verified by GPS — whether the employee is inside
+            the office radius
           </p>
 
           {/* ──── Office Name ──── */}

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
-// Ek hi icon set poore system mein — pehle yeh file Font Awesome par
-// thi aur baqi sab Lucide par
+// One icon set across the whole system — this file used to be on Font
+// Awesome while everything else was on Lucide
 import {
   Hourglass,
   CalendarCheck,
@@ -29,14 +29,15 @@ import {
   Pagination,
   EmptyState,
   TableSkeleton,
+  Select,
 } from "../ui/kit";
 
 const API = "http://127.0.0.1:8000";
 
 const LEAVE_TYPES = ["annual", "casual", "sick", "unpaid", "emergency"];
 
-// Status ka rang ab kit ke tones se — CEO aur Employee dono taraf
-// "approved" ka hara bilkul ek jaisa hara hai
+// Status colours now come from the kit's tones — "approved" green is
+// exactly the same green on both the CEO and employee side
 const statusTone = {
   pending: "warn",
   approved: "ok",
@@ -63,14 +64,14 @@ const prettyDateTime = (s) => {
   });
 };
 
-// ──── Deadline tak kitna waqt bacha ────
+// ──── How much time is left until the deadline ────
 const hoursLeft = (s) => {
   if (!s) return null;
   const diff = new Date(String(s).replace(" ", "T")) - new Date();
-  if (diff <= 0) return "deadline guzar chuki";
+  if (diff <= 0) return "deadline passed";
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
-  return h > 0 ? `${h}h ${m}m baqi` : `${m}m baqi`;
+  return h > 0 ? `${h}h ${m}m left` : `${m}m left`;
 };
 
 const prettyDate = (s) => {
@@ -120,17 +121,17 @@ export default function LeaveManagment() {
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [drafts, setDrafts] = useState({}); // {code: {...edits}}
   const [savingType, setSavingType] = useState(null);
-  const [newType, setNewType] = useState(null); // null = form band
+  const [newType, setNewType] = useState(null); // null = form closed
 
   // ──── Policy Extraction Agent ────
   const [extracting, setExtracting] = useState(false);
-  const [extraction, setExtraction] = useState(null); // agent ki tajweez
+  const [extraction, setExtraction] = useState(null); // the agent's suggestions
   const [picked, setPicked] = useState({}); // {code: bool}
   const [zeroMissing, setZeroMissing] = useState(true);
   const [applying, setApplying] = useState(false);
 
-  // Tab badle to page hamesha 1 par — warna page 3 par khade ho kar
-  // doosri tab kholein to khali list dikhti hai
+  // Switching tabs always resets to page 1 — otherwise opening another tab
+  // while on page 3 shows an empty list
   const pickTab = (id) => {
     setActiveTab(id);
     setCurrentPage(1);
@@ -170,7 +171,7 @@ export default function LeaveManagment() {
       if (calRes.ok) setCalendar(calData.leaves || []);
       if (empRes.ok) setEmployees(empData.employees || []);
     } catch {
-      setError("Server se connect nahi ho paya");
+      setError("Could not connect to the server");
     }
     setLoading(false);
   }, [authHeaders]);
@@ -194,21 +195,21 @@ export default function LeaveManagment() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || `${action} nahi ho paya`);
+        setError(data.detail || `Could not ${action}`);
       } else {
         setSelected(null);
         setCeoNote("");
-        // ──── Balance se zyada approve hui to CEO ko batao ────
+        // ──── If it went beyond the balance, tell the CEO ────
         if (data.over_entitlement) {
           setNotice(
-            `Approve ho gayi — magar balance se zyada thi. ${data.note || ""}`,
+            `Approved — but it exceeded the balance. ${data.note || ""}`,
           );
         } else if (action === "approve") {
           setNotice(
-            `Approved — ${data.days_deducted} working days kate, ${data.remaining_balance} bache`,
+            `Approved — ${data.days_deducted} working days deducted, ${data.remaining_balance} left`,
           );
         } else {
-          setNotice("Request reject ho gayi");
+          setNotice("Request rejected");
         }
         await fetchData();
       }
@@ -218,10 +219,10 @@ export default function LeaveManagment() {
     setDeciding(false);
   };
 
-  // ──── Approved leave cancel — CEO shuru ho chuki bhi cancel kar sakta hai ────
+  // ──── Cancel approved leave — the CEO can cancel even one that has started ────
   const cancelApproved = async (item) => {
-    const label = `${item.employee_name} ki ${item.leave_type} leave (${prettyDate(item.start_date)})`;
-    if (!window.confirm(`${label} cancel karein?\n\nBalance wapis mil jayega.`))
+    const label = `${item.employee_name}'s ${item.leave_type} leave (${prettyDate(item.start_date)})`;
+    if (!window.confirm(`Cancel ${label}?\n\nThe balance will be returned.`))
       return;
 
     setDeciding(true);
@@ -230,16 +231,16 @@ export default function LeaveManagment() {
       const res = await fetch(`${API}/leave/cancel/${item.leave_id}`, {
         method: "POST",
         headers: jsonHeaders,
-        body: JSON.stringify({ reason: "CEO ne cancel ki" }),
+        body: JSON.stringify({ reason: "Cancelled by HR" }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Cancel nahi ho payi");
+        setError(data.detail || "Could not cancel this request");
       } else {
         setNotice(
-          `Leave cancel ho gayi${
-            data.days_restored ? ` — ${data.days_restored} din balance mein wapis` : ""
+          `Leave cancelled${
+            data.days_restored ? ` — ${data.days_restored} day(s) returned to the balance` : ""
           }`,
         );
         await fetchData();
@@ -256,13 +257,13 @@ export default function LeaveManagment() {
         headers: authHeaders,
       });
       if (!res.ok) {
-        setError("Certificate available nahi hai");
+        setError("Certificate is not available");
         return;
       }
       const blob = await res.blob();
       window.open(URL.createObjectURL(blob), "_blank");
     } catch {
-      setError("Certificate load nahi hua");
+      setError("Could not load the certificate");
     }
   };
 
@@ -282,7 +283,7 @@ export default function LeaveManagment() {
         const data = await res.json();
         if (res.ok) setBalanceRows(data.balances || []);
       } catch {
-        setError("Balance load nahi hua");
+        setError("Could not load the balance");
       }
     },
     [authHeaders],
@@ -307,7 +308,7 @@ export default function LeaveManagment() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.detail || "Adjust nahi hua");
+      if (!res.ok) setError(data.detail || "Could not adjust the balance");
       else await loadBalances(balanceEmp);
     } catch {
       setError("Server error");
@@ -318,8 +319,8 @@ export default function LeaveManagment() {
   // ══════════════════════════════════════
   // Leave types
   // ══════════════════════════════════════
-  // Draft = jo CEO ne abhi type kiya hai magar Save nahi dabaya.
-  // Isse pata chalta hai kaunsi row badli hai (Save button tabhi jagta hai).
+  // Draft = what the CEO has typed but not yet saved.
+  // It tells us which row changed (Save only wakes up then).
   const draftOf = (t) => ({ ...t, ...(drafts[t.code] || {}) });
   const isDirty = (t) => !!drafts[t.code];
 
@@ -342,12 +343,16 @@ export default function LeaveManagment() {
           requires_certificate: !!draft.requires_certificate,
           advance_notice_days: Number(draft.advance_notice_days) || 0,
           is_enabled: draft.is_enabled !== false,
+          // Payroll's unpaid-leave deduction runs solely off this.
+          // `!== false` because undefined means "paid" — when in doubt,
+          // in the employee's favour.
+          is_paid: draft.is_paid !== false,
           policy_reference: draft.policy_reference || null,
         }),
       });
       const data = await res.json();
 
-      if (!res.ok) setError(data.detail || "Save nahi ho paya");
+      if (!res.ok) setError(data.detail || "Could not save");
       else {
         setNotice(data.message + (data.note ? ` — ${data.note}` : ""));
         await fetchData();
@@ -361,9 +366,9 @@ export default function LeaveManagment() {
   const removeType = async (type) => {
     if (
       !window.confirm(
-        `"${type.label}" hatana chahte hain?\n\n` +
-          `Agar is par purani requests hain to sirf BAND hogi (delete nahi) ` +
-          `taake history mehfooz rahe.`,
+        `Remove "${type.label}"?\n\n` +
+          `If there are existing requests on it, it will only be DISABLED (not deleted) ` +
+          `so the history stays intact.`,
       )
     )
       return;
@@ -376,7 +381,7 @@ export default function LeaveManagment() {
         headers: authHeaders,
       });
       const data = await res.json();
-      if (!res.ok) setError(data.detail || "Delete nahi ho paya");
+      if (!res.ok) setError(data.detail || "Could not delete");
       else {
         setNotice(data.message + (data.note ? ` — ${data.note}` : ""));
         await fetchData();
@@ -389,7 +394,7 @@ export default function LeaveManagment() {
 
   const createType = async () => {
     if (!newType?.code?.trim()) {
-      setError("Type ka code likhein");
+      setError("Please enter a code for the type");
       return;
     }
     setSavingType("__new__");
@@ -406,11 +411,12 @@ export default function LeaveManagment() {
           requires_certificate: !!newType.requires_certificate,
           advance_notice_days: Number(newType.advance_notice_days) || 0,
           is_enabled: true,
+          is_paid: newType.is_paid !== false,
           policy_reference: newType.policy_reference || null,
         }),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.detail || "Type nahi bani");
+      if (!res.ok) setError(data.detail || "Could not create the type");
       else {
         setNotice(data.message);
         setNewType(null);
@@ -425,8 +431,8 @@ export default function LeaveManagment() {
   // ══════════════════════════════════════
   // Policy Extraction Agent
   // ══════════════════════════════════════
-  // Agent sirf TAJWEEZ deta hai — kuch save nahi karta. CEO checkbox se
-  // chunta hai aur Apply dabata hai. LLM ki ghalti seedha balance mein nahi jaati.
+  // The agent only SUGGESTS — it saves nothing. The CEO ticks the boxes
+  // and presses Apply. An LLM mistake never lands straight in a balance.
   const runExtraction = async () => {
     setExtracting(true);
     setError("");
@@ -439,10 +445,10 @@ export default function LeaveManagment() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.detail || "Policy parh nahi paye");
+        setError(data.detail || "Could not read the policy");
       } else {
         setExtraction(data);
-        // ──── High confidence wali khud tick, low confidence CEO khud dekhe ────
+        // ──── High confidence is pre-ticked; low confidence the CEO reviews ────
         const pre = {};
         (data.suggested || []).forEach((t) => {
           pre[t.code] = t.confidence === "high";
@@ -450,7 +456,7 @@ export default function LeaveManagment() {
         setPicked(pre);
         if (!data.suggested?.length) {
           setNotice(
-            "Policy document mein koi leave type nahi mili — types manually banayein",
+            "No leave type was found in the policy document — create the types manually",
           );
         }
       }
@@ -463,7 +469,7 @@ export default function LeaveManagment() {
   const applyExtraction = async () => {
     const chosen = (extraction?.suggested || []).filter((t) => picked[t.code]);
     if (!chosen.length) {
-      setError("Kam se kam ek type chunein");
+      setError("Please select at least one type");
       return;
     }
 
@@ -483,13 +489,16 @@ export default function LeaveManagment() {
             requires_certificate: !!t.requires_certificate,
             advance_notice_days: t.advance_notice_days || 0,
             is_enabled: true,
+            // The server has already collapsed the three states (yes/no/
+            // document silent) into one value — we just send it
+            is_paid: t.is_paid !== false,
             policy_reference: t.source_quote || null,
           })),
         }),
       });
       const data = await res.json();
 
-      if (!res.ok) setError(data.detail || "Apply nahi ho paya");
+      if (!res.ok) setError(data.detail || "Could not apply");
       else {
         setNotice(data.message + (data.note ? ` — ${data.note}` : ""));
         setExtraction(null);
@@ -546,19 +555,19 @@ export default function LeaveManagment() {
       )}
 
       {/* ── Stats ──
-          Pending card sab se pehle aur clickable — CEO ka asal kaam
-          yehi hai, aur click karte hi wahi list khul jati hai */}
+          The pending card comes first and is clickable — this is the CEO's
+          actual job, and clicking opens exactly that list */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Hourglass}
-          label="Jawab chahiye"
+          label="Needs a response"
           value={summary.pending ?? 0}
-          sub={(summary.pending ?? 0) > 0 ? "Aap ka intezar hai" : "Sab clear"}
+          sub={(summary.pending ?? 0) > 0 ? "Waiting on you" : "All clear"}
           tone={(summary.pending ?? 0) > 0 ? "warn" : "muted"} onClick={() => pickTab("pending")}
           active={activeTab === "pending"} />
         <StatCard icon={Bot}
-          label="Khud approve"
+          label="Auto-approved"
           value={autoApproved}
-          sub="Deadline guzarne par"
+          sub="After the deadline passed"
           tone={autoApproved > 0 ? "ai" : "muted"} />
         <StatCard icon={CalendarCheck}
           label="Approved"
@@ -580,23 +589,20 @@ export default function LeaveManagment() {
           counts={{ pending: summary.pending ?? 0 }} />
 
         {activeTab === "all" && (
-          <select value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+          <Select
+            value={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v);
               setCurrentPage(1);
-            }} className="bg-white/[0.03] text-gray-300 border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs outline-none hover:border-white/20 transition [color-scheme:dark]"
-          >
-            {["All", "pending", "approved", "rejected", "cancelled"].map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            }}
+            options={["All", "pending", "approved", "rejected", "cancelled"]}
+            className="min-w-36"
+          />
         )}
 
         <div className="ml-auto">
           <IconButton icon={RefreshCw}
-            label="Dobara load karein"
+            label="Reload"
             busy={loading} onClick={fetchData} />
         </div>
       </div>
@@ -605,13 +611,13 @@ export default function LeaveManagment() {
       {activeTab === "calendar" &&
         (calendar.length === 0 ? (
           <Panel>
-            <EmptyState icon={CalendarDays} title="Agle 30 din mein koi approved leave nahi"
-              hint="Jo chhuttiyan approve hongi wo yahan tareekh ke hisab se dikhengi." />
+            <EmptyState icon={CalendarDays} title="No approved leave in the next 30 days"
+              hint="Approved leave will appear here, ordered by date." />
           </Panel>
         ) : (
           <div className="rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
             <p className="text-gray-400 text-sm mb-4">
-              Agle 30 din — kaun kab chhutti pe hai
+              Next 30 days — who is off, and when
             </p>
             <div className="flex flex-col gap-3">
               {calendar.map((l) => (
@@ -650,23 +656,23 @@ export default function LeaveManagment() {
       {activeTab === "balances" && (
         <div className="rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center gap-3 mb-5">
-            <p className="text-gray-400 text-sm">Employee chunein:</p>
-            <select value={balanceEmp}
-              onChange={(e) => setBalanceEmp(e.target.value)} className="bg-black/40 text-gray-300 border border-[#05DC7F]/25 rounded-lg px-3 py-2 text-sm outline-none min-w-56"
-            >
-              <option value="">— select —</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.full_name}
-                  {e.department ? ` (${e.department})` : ""}
-                </option>
-              ))}
-            </select>
+            <p className="text-gray-400 text-sm">Select an employee:</p>
+            <Select
+              value={balanceEmp}
+              onChange={setBalanceEmp}
+              placeholder="Select an employee…"
+              className="min-w-56"
+              options={employees.map((e) => ({
+                value: String(e.id),
+                label: e.full_name,
+                hint: e.department || undefined,
+              }))}
+            />
           </div>
 
           {!balanceEmp ? (
             <div className="text-center text-gray-500 py-8 text-sm">
-              Balance dekhne ke liye employee chunein
+              Select an employee to see their balance
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -715,12 +721,12 @@ export default function LeaveManagment() {
       {activeTab === "types" && (
         <div className="rounded-2xl bg-black/40 border border-[#05DC7F]/25 p-4 md:p-6">
           <p className="text-gray-400 text-sm mb-1">
-            Aap ki company ki leave types
+            Your company's leave types
           </p>
           <p className="text-gray-500 text-xs mb-4">
-            Entitlement <b className="text-gray-400">0</b> kar dein to type
-            dikhti to rahegi magar employee us par apply nahi kar sakega.
-            Poori tarah chhupana ho to <b className="text-gray-400">Off</b> kar
+            Set the entitlement to <b className="text-gray-400">0</b> and the
+            type stays visible but cannot be applied for. To hide it
+            entirely, switch it <b className="text-gray-400">Off</b>
             dein.
           </p>
 
@@ -729,34 +735,34 @@ export default function LeaveManagment() {
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
               <div>
                 <p className="text-purple-300 text-sm font-medium flex items-center gap-2">
-                  <Bot size={14} /> Types policy document se khud lagti hain
+                  <Bot size={14} /> Types are applied automatically from the policy document
                 </p>
                 <p className="text-gray-500 text-xs mt-1">
-                  Jab bhi Settings mein policy document upload hoti hai, agent
-                  usay parh kar types khud laga deta hai — jo policy mein na
-                  ho wo band ho jati hai. Neeche kuch ghalat lage to yahin
-                  theek kar lein.
+                  Whenever a policy document is uploaded in Settings, the
+                  agent reads it and applies the types itself — anything not
+                  in the policy is disabled. If something below looks wrong,
+                  correct it here.
                 </p>
               </div>
-              {/* Sirf tab zaroori jab upload ke waqt agent fail ho gaya ho */}
+              {/* Only needed when the agent failed during the upload */}
               <button onClick={runExtraction}
-                disabled={extracting} title="Upload ke waqt agent fail ho gaya ho to dobara chalayein" className="shrink-0 px-3 py-1.5 rounded-lg text-purple-300/80 border border-purple-500/25 text-xs hover:bg-purple-500/15 transition disabled:opacity-50 flex items-center gap-2"
+                disabled={extracting} title="Run it again if the agent failed during the upload" className="shrink-0 px-3 py-1.5 rounded-lg text-purple-300/80 border border-purple-500/25 text-xs hover:bg-purple-500/15 transition disabled:opacity-50 flex items-center gap-2"
               >
                 {extracting ? (
                   <>
-                    <Loader2 size={14} className="animate-spin" /> Parh raha hai...
+                    <Loader2 size={14} className="animate-spin" /> Reading...
                   </>
                 ) : (
-                  "Dobara chalayein"
+                  "Run it again"
                 )}
               </button>
             </div>
 
-            {/* ── Agent ki tajweez — review panel ── */}
+            {/* ── The agent's suggestions — review panel ── */}
             {extraction && (
               <div className="mt-4 pt-4 border-t border-purple-500/20">
                 <p className="text-gray-400 text-xs mb-3">
-                  <b className="text-white">{extraction.policy_document}</b> se{" "}
+                  from <b className="text-white">{extraction.policy_document}</b>{" "}
                   {extraction.suggested?.length || 0} type mili
                   {extraction.chunks_used > 0 && (
                     <span className="text-gray-600">
@@ -795,13 +801,32 @@ export default function LeaveManagment() {
                           <span className="text-gray-500"> · {t.code}</span>
                           {t.is_new ? (
                             <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-blue-500/20 text-blue-400">
-                              nayi
+                              new
                             </span>
                           ) : t.changes_entitlement ? (
                             <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-yellow-500/20 text-yellow-400">
                               {t.current_entitlement} → {t.days_per_year}
                             </span>
                           ) : null}
+
+                          {/* ── Unpaid ── */}
+                          {/* This is the most consequential change being
+                              applied: payroll will deduct salary for it. So
+                              its own colour and its own place — it must not
+                              get buried next to the day count */}
+                          {t.is_paid === false && (
+                            <span
+                              title={
+                                t.paid_from_policy
+                                  ? "The document states that this leave is unpaid"
+                                  : "The type's name suggests it is unpaid — please confirm"
+                              }
+                              className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-orange-500/20 text-orange-400"
+                            >
+                              unpaid
+                              {t.changes_paid ? " (changing)" : ""}
+                            </span>
+                          )}
                           <span className={`ml-2 px-1.5 py-0.5 text-[10px] rounded ${
                               t.confidence === "high"
                                 ? "bg-[#05DC7F]/15 text-[#05DC7F]"
@@ -810,16 +835,16 @@ export default function LeaveManagment() {
                           >
                             {t.confidence === "high"
                               ? "confident"
-                              : "check karein"}
+                              : "check this"}
                           </span>
                         </p>
 
                         <p className="text-gray-400 text-xs mt-0.5">
-                          {t.is_unlimited ? "∞" : `${t.days_per_year} din/saal`}
+                          {t.is_unlimited ? "∞" : `${t.days_per_year} days/year`}
                           {t.advance_notice_days > 0
-                            ? ` · ${t.advance_notice_days} din pehle`
-                            : " · usi din bhi"}
-                          {t.requires_certificate && " · certificate lazmi"}
+                            ? ` · ${t.advance_notice_days} days notice`
+                            : " · same day allowed"}
+                          {t.requires_certificate && " · certificate required"}
                         </p>
 
                         {t.source_quote ? (
@@ -828,7 +853,7 @@ export default function LeaveManagment() {
                           </p>
                         ) : (
                           <p className="text-orange-400/80 text-[11px] mt-1">
-                            Document se koi line quote nahi hui — khud tasdeeq karein
+                            No line was quoted from the document — please verify
                           </p>
                         )}
                       </div>
@@ -842,8 +867,8 @@ export default function LeaveManagment() {
                       checked={zeroMissing}
                       onChange={(e) => setZeroMissing(e.target.checked)} className="mt-0.5 accent-[#05DC7F] w-4 h-4" />
                     <span className="text-gray-400 text-xs">
-                      Jo types policy mein nahi mili unki entitlement{" "}
-                      <b className="text-white">0</b> kar dein —{" "}
+                      Set the entitlement of types not found in the policy to{" "}
+                      <b className="text-white">0</b> —{" "}
                       <span className="text-gray-500">
                         {extraction.missing_from_policy
                           .map((m) => m.label)
@@ -857,7 +882,7 @@ export default function LeaveManagment() {
                   <button onClick={applyExtraction}
                     disabled={applying} className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:bg-[#04c56f] transition disabled:opacity-50"
                   >
-                    {applying ? "Save ho raha hai..." : "Chuni hui types apply karein"}
+                    {applying ? "Saving..." : "Apply the selected types"}
                   </button>
                   <button onClick={() => setExtraction(null)} className="px-4 py-2 rounded-xl text-gray-400 border border-gray-700 text-sm hover:bg-gray-800 transition"
                   >
@@ -889,7 +914,7 @@ export default function LeaveManagment() {
                         <span className="text-gray-600"> · {t.code}</span>
                         {t.source === "policy" && (
                           <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-[#05DC7F]/15 text-[#05DC7F]">
-                            policy se
+                            from policy
                           </span>
                         )}
                         {t.source === "manual" && (
@@ -927,9 +952,9 @@ export default function LeaveManagment() {
 
                     {/* Notice */}
                     <div className="w-full lg:w-32">
-                      <p className="text-gray-500 text-xs mb-1" title="Kitne din pehle apply karni hai. 0 = usi din bhi"
+                      <p className="text-gray-500 text-xs mb-1" title="How many days in advance it must be applied for. 0 = same day allowed"
                       >
-                        Notice (din)
+                        Notice (days)
                       </p>
                       <input type="number"
                         min="0"
@@ -957,6 +982,23 @@ export default function LeaveManagment() {
                           {label}
                         </label>
                       ))}
+
+                      {/* ── Paid ── */}
+                      {/* This is the one toggle that affects MONEY directly:
+                          payroll's unpaid-leave deduction runs solely off it.
+                          So it is not in the map with the other toggles —
+                          it stands on its own, with its own explanation */}
+                      <label
+                        title="Switch this off and the leave becomes unpaid — payroll will deduct for each day"
+                        className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400"
+                      >
+                        <input type="checkbox"
+                          checked={d.is_paid !== false}
+                          onChange={(e) =>
+                            editType(t.code, { is_paid: e.target.checked })
+                          } className="accent-[#05DC7F] w-3.5 h-3.5" />
+                        Paid
+                      </label>
 
                       <label className="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400">
                         <input type="checkbox"
@@ -988,13 +1030,19 @@ export default function LeaveManagment() {
                     Number(d.default_entitlement) === 0 &&
                     d.is_enabled !== false && (
                       <p className="text-yellow-400/80 text-xs mt-2">
-                        Entitlement 0 hai — employee ko card dikhega magar apply
-                        nahi kar sakega
+                        Entitlement is 0 — the employee will see the card but
+                        cannot apply
                       </p>
                     )}
+                  {d.is_paid === false && (
+                    <p className="text-orange-400/90 text-xs mt-2">
+                      Unpaid — payroll will deduct one day's salary for every
+                      working day of it
+                    </p>
+                  )}
                   {d.is_enabled === false && (
                     <p className="text-gray-500 text-xs mt-2">
-                      Band hai — employee ko yeh type dikhti hi nahi
+                      Disabled — the employee will not see this type at all
                     </p>
                   )}
                 </div>
@@ -1002,7 +1050,7 @@ export default function LeaveManagment() {
             })}
           </div>
 
-          {/* ── Nayi type ── */}
+          {/* ── New type ── */}
           <div className="mt-5">
             {!newType ? (
               <button onClick={() =>
@@ -1013,20 +1061,21 @@ export default function LeaveManagment() {
                     advance_notice_days: 1,
                     requires_certificate: false,
                     is_unlimited: false,
+                    is_paid: true,
                   })
                 } className="px-4 py-2 rounded-xl bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30 text-sm hover:bg-[#05DC7F]/25 transition"
               >
-                + Nayi leave type
+                + New leave type
               </button>
             ) : (
               <div className="p-4 rounded-xl border border-[#05DC7F]/30 bg-black/40">
                 <p className="text-white text-sm font-medium mb-3">
-                  Nayi leave type
+                  New leave type
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                   <div>
                     <p className="text-gray-500 text-xs mb-1">
-                      Code (angrezi, bina space)
+                      Code (lowercase, no spaces)
                     </p>
                     <input type="text"
                       value={newType.code}
@@ -1057,7 +1106,7 @@ export default function LeaveManagment() {
                       } className="w-full bg-black/40 border border-[#05DC7F]/25 text-white rounded-lg px-3 py-1.5 text-sm outline-none" />
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs mb-1">Notice (din)</p>
+                    <p className="text-gray-500 text-xs mb-1">Notice (days)</p>
                     <input type="number"
                       min="0"
                       value={newType.advance_notice_days}
@@ -1072,8 +1121,9 @@ export default function LeaveManagment() {
 
                 <div className="flex gap-4 mb-4 flex-wrap">
                   {[
-                    ["is_unlimited", "Unlimited (balance se nahi katti)"],
-                    ["requires_certificate", "Certificate lazmi"],
+                    ["is_unlimited", "Unlimited (does not use balance)"],
+                    ["requires_certificate", "Certificate required"],
+                    ["is_paid", "Paid (salary continues)"],
                   ].map(([key, label]) => (
                     <label key={key} className="flex items-center gap-2 cursor-pointer text-xs text-gray-400"
                     >
@@ -1091,7 +1141,7 @@ export default function LeaveManagment() {
                   <button onClick={createType}
                     disabled={savingType === "__new__"} className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:bg-[#04c56f] transition disabled:opacity-50"
                   >
-                    {savingType === "__new__" ? "Ban rahi hai..." : "Banayein"}
+                    {savingType === "__new__" ? "Creating..." : "Create"}
                   </button>
                   <button onClick={() => setNewType(null)} className="px-4 py-2 rounded-xl text-gray-400 border border-gray-700 text-sm hover:bg-gray-800 transition"
                   >
@@ -1114,13 +1164,13 @@ export default function LeaveManagment() {
           <Panel>
             <EmptyState icon={activeTab === "pending" ? Inbox : Search} title={
                 activeTab === "pending"
-                  ? "Koi request aap ka intezar nahi kar rahi"
-                  : "Koi leave request nahi mili"
+                  ? "No request is waiting on you"
+                  : "No leave requests found"
               }
               hint={
                 activeTab === "pending"
-                  ? "Nayi request aate hi yahan dikhegi — aur aap ko email bhi jayegi."
-                  : "Filter badal kar dekhein, ya All chunein."
+                  ? "A new request will appear here — and you will get an email too."
+                  : "Try another filter, or choose All."
               } />
           </Panel>
         ) : (
@@ -1194,18 +1244,18 @@ export default function LeaveManagment() {
                       {item.remaining_balance < item.deductible_days && (
                         <span className="text-red-400">
                           {" "}
-                          — kam par rahe hain
+                          — short of balance
                         </span>
                       )}
                     </p>
                   )}
 
-                  {/* ── Aap jawab na dein to kab khud approve hogi ── */}
+                  {/* ── When it auto-approves if you do not respond ── */}
                   {item.status === "pending" && item.auto_approve_at && (
                     <p className="text-orange-400/90 text-xs flex items-center gap-1.5">
                       <Hourglass size={11} />
-                      Jawab na diya to {prettyDateTime(item.auto_approve_at)} ko
-                      khud approve ho jayegi
+                      Auto-approves on {prettyDateTime(item.auto_approve_at)}
+                      if there is no response
                       <span className="text-gray-500">
                         ({hoursLeft(item.auto_approve_at)})
                       </span>
@@ -1224,8 +1274,8 @@ export default function LeaveManagment() {
                     </button>
                   )}
 
-                  {/* ── Approved leave CEO kabhi bhi cancel kar sakta hai,
-                        chahe shuru ho chuki ho (employee nahi kar sakta) ── */}
+                  {/* ── The CEO can cancel approved leave at any time, even
+                        one already started (the employee cannot) ── */}
                   {item.status === "approved" && (
                     <button onClick={() => cancelApproved(item)}
                       disabled={deciding} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 transition whitespace-nowrap text-sm disabled:opacity-40"
@@ -1305,7 +1355,7 @@ export default function LeaveManagment() {
             {selected.reason && (
               <div className="mb-4 p-3 rounded-xl bg-black/40 border border-[#05DC7F]/15">
                 <p className="text-gray-500 text-xs mb-1">
-                  Employee ki wajah
+                  The employee's reason
                 </p>
                 <p className="text-gray-300 text-sm">{selected.reason}</p>
               </div>
@@ -1314,7 +1364,7 @@ export default function LeaveManagment() {
             {selected.has_medical_cert && (
               <button onClick={() => viewCertificate(selected.leave_id)} className="mb-4 w-full py-2 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition text-sm flex items-center justify-center gap-2"
               >
-                <Paperclip size={14} /> Medical Certificate kholein
+                <Paperclip size={14} /> Open medical certificate
                 {selected.certificate_name && (
                   <span className="text-gray-500 text-xs">
                     ({selected.certificate_name})
@@ -1327,9 +1377,9 @@ export default function LeaveManagment() {
               <div className="mb-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/30">
                 <p className="text-orange-400 text-xs flex items-center gap-2">
                   <Hourglass size={14} />
-                  Jawab na dene ki surat mein yeh request{" "}
-                  <b>{prettyDateTime(selected.auto_approve_at)}</b> ko khud
-                  approve ho jayegi ({hoursLeft(selected.auto_approve_at)})
+                  If there is no response, this request will auto-approve on{" "}
+                  <b>{prettyDateTime(selected.auto_approve_at)}</b>
+                  ({hoursLeft(selected.auto_approve_at)})
                 </p>
               </div>
             )}
@@ -1337,7 +1387,7 @@ export default function LeaveManagment() {
             {selected.agent_reason && (
               <div className="mb-4 p-3 rounded-xl bg-purple-500/10 border border-purple-500/30">
                 <p className="text-purple-400 text-xs font-semibold mb-1 flex items-center gap-1">
-                  <Bot size={14} /> Leave Agent ka mashwara
+                  <Bot size={14} /> Leave Agent recommendation
                 </p>
                 <p className="text-gray-300 text-sm">{selected.agent_reason}</p>
                 {selected.policy_reference && (
@@ -1352,17 +1402,17 @@ export default function LeaveManagment() {
               <p className="text-gray-400 text-sm mb-1">
                 Note{" "}
                 <span className="text-gray-600">
-                  — employee ko yahi wajah dikhegi
+                  — this is the reason the employee will see
                 </span>
               </p>
               <textarea value={ceoNote}
                 onChange={(e) => setCeoNote(e.target.value)}
                 rows={3}
-                placeholder="Reject kar rahe hain to wajah zaroor likhein" className="w-full bg-black/40 border border-[#05DC7F]/30 text-white rounded-lg px-3 py-2 outline-none text-sm resize-none" />
-              {/* Reject par wajah lazmi — employee ko pata to chale kyun hui */}
+                placeholder="If you are rejecting, please give a reason" className="w-full bg-black/40 border border-[#05DC7F]/30 text-white rounded-lg px-3 py-2 outline-none text-sm resize-none" />
+              {/* A reason is required to reject — the employee must know why */}
               {!ceoNote.trim() && (
                 <p className="text-gray-500 text-xs mt-1">
-                  Approve ke liye optional hai, <b>reject ke liye zaroori</b>.
+                  Optional when approving, <b>required when rejecting</b>.
                 </p>
               )}
             </div>
@@ -1377,7 +1427,7 @@ export default function LeaveManagment() {
               <button onClick={() => decide(selected.leave_id, "reject")}
                 disabled={deciding || !ceoNote.trim()} title={
                   !ceoNote.trim()
-                    ? "Reject karne ke liye wajah likhna zaroori hai"
+                    ? "A reason is required in order to reject"
                     : ""
                 } className="flex items-center gap-2 px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
               >

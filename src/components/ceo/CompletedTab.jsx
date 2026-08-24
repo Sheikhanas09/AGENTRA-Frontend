@@ -123,7 +123,7 @@ export default function CompletedTab({ interviews = [] }) {
     <div className="flex flex-col gap-5">
       {currentItems.length === 0 && (
         <div className="text-center text-gray-400 py-6">
-          Koi completed interview nahi!
+          No completed interviews
         </div>
       )}
       {currentItems.map((item, index) => (

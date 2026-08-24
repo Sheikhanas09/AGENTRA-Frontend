@@ -57,7 +57,7 @@ export default function Recruitment() {
           <AllCandidatesTab onShortlist={handleShortlist} />
         )}
 
-        {/* ──── jobPosts prop hata diya — ab JobPostsTab khud fetch karta hai ──── */}
+        {/* ──── The jobPosts prop is gone — JobPostsTab fetches its own ──── */}
         {activeTab === "Job Posts" && (
           <JobPostsTab setSelectedJob={setSelectedJob} />
         )}
@@ -95,7 +95,7 @@ export default function Recruitment() {
               <pre className="text-gray-300 leading-relaxed whitespace-pre-line break-words text-sm sm:text-base font-sans">
                 {selectedJob.full_description ||
                   selectedJob.description ||
-                  "Description nahi mili"}
+                  "No description available"}
               </pre>
             </div>
 

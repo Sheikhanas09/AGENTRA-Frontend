@@ -12,12 +12,20 @@ import {
   FileText,
   MapPin,
   Timer,
+  Wallet,
+  Download,
 } from "lucide-react";
 import { formatMinutes } from "../../utils/time";
 
 const API = "http://127.0.0.1:8000";
 
-// ──── PKT (UTC+5) — backend isi par chalta hai ────
+// ──── Money — same shape as EmployeePayroll.jsx ────
+const money = (n) =>
+  n == null
+    ? "—"
+    : Number(n).toLocaleString("en-PK", { maximumFractionDigits: 0 });
+
+// ──── PKT (UTC+5) — the backend runs on this ────
 const pktNow = () => new Date(Date.now() + 5 * 60 * 60 * 1000);
 
 const fmtTime = (dt) =>
@@ -37,7 +45,7 @@ const fmtDate = (s) => {
   });
 };
 
-// ──── Status colors reserved hain — hamesha text label ke saath ────
+// ──── Status colors are reserved — always paired with a text label ────
 const STATUS_STYLE = {
   approved: "bg-[#05DC7F]/15 text-[#05DC7F] border-[#05DC7F]/40",
   pending: "bg-amber-500/15 text-amber-400 border-amber-500/40",
@@ -54,7 +62,7 @@ function RateRing({ value }) {
   const C = 2 * Math.PI * R;
   const filled = (Math.min(100, Math.max(0, value)) / 100) * C;
 
-  // Fill severity carry karti hai; track usi hue ka halka step hai
+  // The fill carries severity; the track is a lighter step of the same hue
   const stroke =
     value >= 90 ? "#05DC7F" : value >= 75 ? "#fbbf24" : "#fb7185";
 
@@ -144,19 +152,22 @@ export default function DashboardTab() {
   const [summary, setSummary] = useState(null);
   const [balances, setBalances] = useState([]);
   const [leaves, setLeaves] = useState([]);
+  const [slipMeta, setSlipMeta] = useState(null); // first item of /payroll/slips
+  const [slipDetail, setSlipDetail] = useState(null); // its breakdown
+  const [dlBusy, setDlBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const fetchAll = useCallback(async () => {
     if (!employeeId) {
-      setError("Login dobara karein — user id nahi mili");
+      setError("Please sign in again — your user id was not found");
       setLoading(false);
       return;
     }
 
     const now = pktNow();
     try {
-      const [tRes, sRes, bRes, lRes] = await Promise.all([
+      const [tRes, sRes, bRes, lRes, pRes] = await Promise.all([
         fetch(`${API}/attendance/today/${employeeId}`, { headers: authHeaders }),
         fetch(
           `${API}/attendance/summary/${employeeId}/${now.getFullYear()}/${now.getMonth() + 1}`,
@@ -166,14 +177,18 @@ export default function DashboardTab() {
         fetch(`${API}/leave/history/${employeeId}?limit=5`, {
           headers: authHeaders,
         }),
+        // Own slips only — the endpoint resolves the employee from the JWT
+        fetch(`${API}/payroll/slips`, { headers: authHeaders }),
       ]);
 
       if (tRes.ok) setToday(await tRes.json());
       if (sRes.ok) setSummary(await sRes.json());
       if (bRes.ok) setBalances((await bRes.json()).balances || []);
       if (lRes.ok) setLeaves((await lRes.json()).history || []);
+      // Slips arrive newest-first by period, so the first one is the latest
+      if (pRes.ok) setSlipMeta(((await pRes.json()).slips || [])[0] || null);
     } catch {
-      setError("Server se connect nahi ho paya");
+      setError("Could not connect to the server");
     }
     setLoading(false);
   }, [employeeId, authHeaders]);
@@ -182,7 +197,7 @@ export default function DashboardTab() {
     fetchAll();
   }, [fetchAll]);
 
-  // ──── Har minute + tab focus par taza ────
+  // ──── Refresh every minute and on tab focus ────
   useEffect(() => {
     const id = setInterval(() => {
       if (!document.hidden) fetchAll();
@@ -194,6 +209,60 @@ export default function DashboardTab() {
       window.removeEventListener("focus", onFocus);
     };
   }, [fetchAll]);
+
+  // ──── Slip breakdown — only when the slip itself CHANGES ────
+  // `fetchAll` runs every minute, but a slip that has been generated
+  // never changes (its snapshots are frozen inside it). So the detail
+  // call is kept out of that refresh — otherwise two wasted calls a minute.
+  const slipId = slipMeta?.payslip_id;
+  useEffect(() => {
+    if (!slipId) return;
+    let alive = true;
+    fetch(`${API}/payroll/slip/${slipId}`, { headers: authHeaders })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.slip) setSlipDetail(d.slip);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [slipId, authHeaders]);
+
+  // The old slip's breakdown must not linger under a new slip. Writing
+  // `setSlipDetail(null)` inside the effect would have been easier, but
+  // that is a synchronous setState inside an effect (cascading render) —
+  // so instead of clearing the state we MATCH it here.
+  const slipBreakdown =
+    slipDetail?.payslip_id === slipId ? slipDetail : null;
+
+  // ──── PDF download ────
+  // Needs an auth header, so a plain <a href> will not work — fetch,
+  // then blob (the same approach used on the Payroll tab)
+  const downloadSlip = async () => {
+    if (!slipMeta) return;
+    setDlBusy(true);
+    try {
+      const res = await fetch(
+        `${API}/payroll/slip/${slipMeta.payslip_id}/download`,
+        { headers: authHeaders },
+      );
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.detail || "PDF not found");
+      } else {
+        const url = URL.createObjectURL(await res.blob());
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `salary-slip-${slipMeta.period}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {
+      setError("Download failed");
+    }
+    setDlBusy(false);
+  };
 
   // ══════════════════════════════════════
   // Derived
@@ -255,6 +324,36 @@ export default function DashboardTab() {
   const rate = rateBase > 0 ? Math.round((presentDays / rateBase) * 100) : 0;
   const monthName = pktNow().toLocaleDateString("en-US", { month: "long" });
 
+  // ──── Deduction breakdown — so it CONNECTS to the tiles above ────
+  // This is what makes the card worth having. "12 days late" sits in a
+  // tile above; the MONEY for it sits here. Split across two tabs, people
+  // have to join the two themselves — and mostly they never do.
+  const cuts = useMemo(() => {
+    const d = slipBreakdown?.deductions || {};
+    const a = slipBreakdown?.attendance || {};
+    const out = [];
+    const add = (amount, text) => {
+      if (amount > 0) out.push({ amount, text });
+    };
+
+    add(d.late_deduction, `${a.late_count || 0} days late`);
+    add(d.absent_deduction, `${a.absent_days || 0} days absent`);
+    add(
+      d.unpaid_leave_deduction,
+      `${a.unpaid_leave_days || 0} days unpaid leave`,
+    );
+    add(
+      d.undertime_deduction,
+      `${formatMinutes(a.undertime_minutes, { empty: "0m" })} short`,
+    );
+    add(d.tax_deduction, "income tax");
+    add(d.provident_fund, "provident fund");
+    add(d.loan_deduction, "loan instalment");
+    add(d.other_deductions, "other deductions");
+
+    return out;
+  }, [slipBreakdown]);
+
   const liveHours =
     today?.net_hours != null
       ? today.net_hours
@@ -295,7 +394,7 @@ export default function DashboardTab() {
           {/* ── Status ── */}
           <div className="flex-1 min-w-0">
             <p className="text-gray-400 text-sm">
-              {firstName ? `Assalam-o-Alaikum, ${firstName}` : "Assalam-o-Alaikum"}
+              {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
             </p>
 
             <div className="flex items-center gap-4 mt-4">
@@ -319,7 +418,7 @@ export default function DashboardTab() {
                 </h1>
                 <p className="text-gray-500 text-sm mt-2">
                   {today?.on_leave
-                    ? "Aaj aap approved leave par hain"
+                    ? "You are on approved leave today"
                     : today?.check_in_time
                       ? `Check-in ${fmtTime(today.check_in_time)}${
                           today.is_late
@@ -328,12 +427,12 @@ export default function DashboardTab() {
                         }`
                       : today?.checkin_window?.open === false
                         ? today.checkin_window.message
-                        : "Attendance tab se check-in karein"}
+                        : "Check in from the Attendance tab"}
                 </p>
               </div>
             </div>
 
-            {/* ── Aaj ki tafseel ── */}
+            {/* ── Today's detail ── */}
             <div className="flex flex-wrap gap-x-8 gap-y-3 mt-6">
               {[
                 {
@@ -392,13 +491,13 @@ export default function DashboardTab() {
               </p>
               <p className="text-white text-2xl font-bold mt-1">
                 {presentDays}
-                <span className="text-gray-600 text-base"> din hazir</span>
+                <span className="text-gray-600 text-base"> days present</span>
               </p>
               <p className="text-gray-500 text-xs mt-2">
                 {netHours.toFixed(1)}h total
               </p>
               <p className="text-gray-500 text-xs">
-                avg {avgHours.toFixed(1)}h / din
+                avg {avgHours.toFixed(1)}h / day
               </p>
             </div>
           </div>
@@ -410,7 +509,7 @@ export default function DashboardTab() {
         <Tile
           label="Present"
           value={presentDays}
-          sub={`${monthName} mein`}
+          sub={`in ${monthName}`}
           icon={<CalendarCheck size={15} />}
         />
         <Tile
@@ -423,24 +522,131 @@ export default function DashboardTab() {
         <Tile
           label="Late"
           value={lateCount}
-          sub={lateCount > 0 ? "dair se aaye" : "waqt par"}
+          sub={lateCount > 0 ? "arrived late" : "on time"}
           icon={<AlertTriangle size={15} />}
           tone={lateCount > 0 ? "warn" : "mute"}
         />
         <Tile
           label="Overtime"
           value={formatMinutes(otMins, { empty: "0m" })}
-          sub={otMins > 0 ? "extra kaam" : "koi nahi"}
+          sub={otMins > 0 ? "extra hours worked" : "none"}
           icon={<TrendingUp size={15} />}
           tone={otMins > 0 ? "good" : "mute"}
         />
         <Tile
           label="Undertime"
           value={formatMinutes(utMins, { empty: "0m" })}
-          sub={utMins > 0 ? "kam waqt" : "poora waqt"}
+          sub={utMins > 0 ? "short of full hours" : "full hours"}
           icon={<TrendingDown size={15} />}
           tone={utMins > 0 ? "bad" : "mute"}
         />
+      </div>
+
+      {/* ══════ Salary slip ══════ */}
+      {/* Placed deliberately RIGHT AFTER the tiles: "Late 3" and
+          "Undertime 45m" sit above, and the money for them sits below.
+          When both numbers land in one glance people join them up
+          themselves — otherwise attendance lives in one tab and salary
+          in another.
+
+          The hero figure stays the attendance ring — net salary is large
+          but not 48px+, or two big numbers would compete in one view and
+          split the eye. */}
+      <div className="rounded-2xl border border-white/8 bg-linear-to-br from-white/5 to-transparent p-6">
+        <div className="flex justify-between items-baseline mb-5">
+          <h2 className="text-white font-semibold flex items-center gap-2">
+            <Wallet size={16} className="text-[#05DC7F]" />
+            Latest Salary Slip
+          </h2>
+          {slipMeta && (
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                slipMeta.status === "sent"
+                  ? "bg-[#05DC7F]/15 text-[#05DC7F] border-[#05DC7F]/40"
+                  : "bg-amber-500/15 text-amber-400 border-amber-500/40"
+              }`}
+            >
+              {slipMeta.status === "sent" ? "emailed to you" : "ready"}
+            </span>
+          )}
+        </div>
+
+        {!slipMeta ? (
+          /* Never hide the card — an empty card says the thing exists,
+             it just has not been issued yet. A missing card makes people
+             think something is broken */
+          <p className="text-gray-500 text-sm">
+            No slip issued yet — it will appear here once HR processes payroll
+          </p>
+        ) : (
+          <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            {/* ── Net ── */}
+            <div className="lg:w-56 shrink-0">
+              <p className="text-gray-500 text-[11px] uppercase tracking-wider">
+                {slipMeta.period_label}
+              </p>
+              <p className="text-3xl font-bold text-white leading-none mt-1.5">
+                {money(slipMeta.net_salary)}
+                <span className="text-gray-600 text-base font-normal">
+                  {" "}
+                  {slipMeta.currency || "PKR"}
+                </span>
+              </p>
+              <p className="text-gray-600 text-[11px] mt-2">
+                gross {money(slipMeta.gross_pay)} − deductions{" "}
+                {money(slipMeta.total_deductions)}
+              </p>
+            </div>
+
+            {/* ── What was deducted ── */}
+            <div className="flex-1 min-w-0">
+              {!slipBreakdown ? (
+                <p className="text-gray-600 text-xs">Loading breakdown...</p>
+              ) : cuts.length === 0 ? (
+                <p className="text-[#05DC7F] text-sm">
+                  No deductions — full salary
+                </p>
+              ) : (
+                <>
+                  <p className="text-gray-500 text-[11px] uppercase tracking-wider mb-2">
+                    What was deducted
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {cuts.map((c) => (
+                      <span
+                        key={c.text}
+                        className="px-2.5 py-1 rounded-lg text-xs bg-white/5 border border-white/10 text-gray-400"
+                      >
+                        {c.text}{" "}
+                        <span className="text-rose-400/90 font-semibold">
+                          −{money(c.amount)}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ── PDF ── */}
+            <button
+              type="button"
+              onClick={downloadSlip}
+              disabled={!slipMeta.has_pdf || dlBusy}
+              title={
+                slipMeta.has_pdf
+                  ? "Download your salary slip PDF"
+                  : "The PDF for this slip is not available — please contact HR"
+              }
+              className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+              bg-[#05DC7F]/15 text-[#05DC7F] border border-[#05DC7F]/30
+              hover:bg-[#05DC7F]/25 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download size={15} />
+              {dlBusy ? "..." : "PDF"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ══════ Leave ══════ */}
@@ -451,12 +657,12 @@ export default function DashboardTab() {
             <h2 className="text-white font-semibold">Leave Balance</h2>
             <span className="text-[#05DC7F] text-sm font-semibold">
               {totalLeaveLeft}
-              <span className="text-gray-600 font-normal"> din baqi</span>
+              <span className="text-gray-600 font-normal"> days left</span>
             </span>
           </div>
 
           {balances.length === 0 ? (
-            <p className="text-gray-500 text-sm">Koi leave type set nahi</p>
+            <p className="text-gray-500 text-sm">No leave types configured</p>
           ) : (
             <div className="flex flex-col gap-4">
               {balances.map((b) => {
@@ -470,7 +676,7 @@ export default function DashboardTab() {
                 const low = !b.unlimited && b.remaining_days <= 2;
                 const none = !b.unlimited && b.total_entitlement === 0;
 
-                // Fill severity carry karti hai; track usi hue ka halka step
+                // The fill carries severity; the track is a lighter step of it
                 const hue = none
                   ? "#6b7280"
                   : low
@@ -495,7 +701,7 @@ export default function DashboardTab() {
                         {b.unlimited
                           ? "∞"
                           : none
-                            ? "allowed nahi"
+                            ? "not allowed"
                             : `${b.remaining_days} / ${b.total_entitlement}`}
                       </span>
                     </div>
@@ -534,7 +740,7 @@ export default function DashboardTab() {
 
           {leaves.length === 0 ? (
             <p className="text-gray-500 text-sm">
-              Abhi tak koi request nahi — Leave tab se apply karein
+              No requests yet — apply from the Leave tab
             </p>
           ) : (
             <div className="flex flex-col">

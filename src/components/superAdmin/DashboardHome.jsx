@@ -12,11 +12,11 @@ export default function DashboardHome() {
 
   const token = localStorage.getItem("token");
 
-  // ──── Real stats fetch karo ────
+  // ──── Fetch the real stats ────
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Teeno APIs ek saath call karo
+        // Call all three APIs together
         const [activeRes, pendingRes, inactiveRes, rejectedRes] =
           await Promise.all([
             fetch("http://127.0.0.1:8000/admin/approved-ceos", {

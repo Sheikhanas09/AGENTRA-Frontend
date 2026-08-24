@@ -1,37 +1,37 @@
 // ══════════════════════════════════════════
 // GPS Acquisition — 3 stage fallback
 // ══════════════════════════════════════════
-// Kabhi kabhi location fetch nahi hoti thi aur attendance table mein
-// "No GPS" aa jata tha. Teen wajahain thin:
+// Sometimes the location simply would not come through and the attendance
+// table showed "No GPS". There were three reasons:
 //
-//   1. watchPosition ka error callback aate hi hum haar maan lete the.
-//      Windows desktop pe GPS chip nahi hota, to enableHighAccuracy:true
-//      pehle POSITION_UNAVAILABLE deta hai — halanke WiFi se location
-//      mil sakti thi. Ab transient error pe hum sunte rehte hain.
-//   2. maximumAge:0 tha — 30 second purani reading bhi reject ho rahi thi,
-//      halanke attendance ke liye wo bilkul kaafi hai.
-//   3. High accuracy fail ho to koi network-based fallback nahi tha.
+//   1. We gave up the moment watchPosition fired its error callback.
+//      A Windows desktop has no GPS chip, so enableHighAccuracy:true
+//      returns POSITION_UNAVAILABLE first — even though WiFi could have
+//      supplied a location. We now keep listening through transient errors.
+//   2. maximumAge:0 — even a 30-second-old reading was rejected, though
+//      that is perfectly good enough for attendance.
+//   3. There was no network-based fallback when high accuracy failed.
 //
 // Ab: high accuracy → network (WiFi/IP) → cached.
-// Permission DENIED pe hi turant rukte hain (retry ka faida nahi).
+// We stop immediately only on permission DENIED (a retry gains nothing).
 
 export const PERMISSION_DENIED = 1;
 export const POSITION_UNAVAILABLE = 2;
 export const TIMEOUT = 3;
 export const UNSUPPORTED = 0;
 
-// Itni purani reading abhi bhi qabool hai (office mein banda hila nahi hota)
+// A reading this old is still acceptable (people barely move in an office)
 export const LAST_GOOD_MAX_AGE_MS = 3 * 60 * 1000;
 
 export const geoErrorMessage = (code) =>
   ({
-    [UNSUPPORTED]: "Is browser mein location support nahi hai",
+    [UNSUPPORTED]: "This browser does not support location",
     [PERMISSION_DENIED]:
-      "Location permission block hai — address bar ke lock icon se 'Allow' karein",
+      "Location permission is blocked — allow it from the lock icon in the address bar",
     [POSITION_UNAVAILABLE]:
-      "Location service band hai — Windows Settings → Privacy → Location on karein",
-    [TIMEOUT]: "Location lene mein waqt lag gaya — dobara try karein",
-  })[code] || "GPS location nahi mili";
+      "Location services are off — turn them on in Windows Settings → Privacy → Location",
+    [TIMEOUT]: "Getting your location took too long — please try again",
+  })[code] || "No GPS location was available";
 
 const toReading = (pos, source) => ({
   lat: pos.coords.latitude,
@@ -41,7 +41,7 @@ const toReading = (pos, source) => ({
   source,
 });
 
-// ──── Stage 1: kuch seconds sun kar sabse achhi reading ────
+// ──── Stage 1: listen for a few seconds and take the best reading ────
 export function watchBestPosition({ timeoutMs = 10000, targetAccuracy = 30 } = {}) {
   return new Promise((resolve) => {
     let best = null;
@@ -62,13 +62,13 @@ export function watchBestPosition({ timeoutMs = 10000, targetAccuracy = 30 } = {
       (pos) => {
         const reading = toReading(pos, "gps");
         if (!best || reading.accuracy < best.accuracy) best = reading;
-        // ──── Itni achhi reading mil gayi ke aur wait ki zarurat nahi ────
+        // ──── Good enough that there is no point waiting further ────
         if (reading.accuracy <= targetAccuracy) finish();
       },
       (err) => {
         lastError = err.code;
-        // ──── Permission deny = retry bekaar. Baqi errors transient ho
-        //      sakte hain — deadline tak sunte raho ────
+        // ──── Permission denied = a retry is pointless. Other errors may
+        //      may still arrive — keep listening until the deadline ────
         if (err.code === PERMISSION_DENIED) finish();
       },
       { enableHighAccuracy: true, maximumAge: 15000, timeout: timeoutMs },
@@ -93,14 +93,14 @@ export function getPositionOnce({
   });
 }
 
-// ──── Poori strategy ────
+// ──── The full strategy ────
 export async function acquireLocation(options = {}) {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     return { error: UNSUPPORTED };
   }
 
-  // Secure context ke baghair geolocation kaam hi nahi karti
-  // (localhost theek hai, LAN IP par nahi)
+  // Geolocation does not work at all without a secure context
+  // (localhost is fine, a LAN IP is not)
   if (typeof window !== "undefined" && window.isSecureContext === false) {
     return { error: POSITION_UNAVAILABLE };
   }
@@ -108,10 +108,10 @@ export async function acquireLocation(options = {}) {
   const gps = await watchBestPosition(options);
   if (!gps.error) return gps;
 
-  // ──── Permission deny hai to aage koshish bekaar ────
+  // ──── With permission denied there is no point trying further ────
   if (gps.error === PERMISSION_DENIED) return gps;
 
-  // ──── WiFi/IP based — desktop pe aksar yahi chalti hai ────
+  // ──── WiFi/IP based — this is usually what works on a desktop ────
   const network = await getPositionOnce({
     highAccuracy: false,
     timeoutMs: 8000,
@@ -119,7 +119,7 @@ export async function acquireLocation(options = {}) {
   });
   if (!network.error) return network;
 
-  // ──── Aakhri koshish: browser ke paas jo bhi cached hai ────
+  // ──── Last try: whatever the browser has cached ────
   return getPositionOnce({
     highAccuracy: false,
     timeoutMs: 5000,
@@ -127,7 +127,7 @@ export async function acquireLocation(options = {}) {
   });
 }
 
-// ──── Haversine — office se distance meters mein ────
+// ──── Haversine — distance from the office, in metres ────
 export function distanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;

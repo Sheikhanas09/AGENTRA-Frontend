@@ -1,32 +1,40 @@
 /**
  * Agentra UI kit
  * ──────────────
- * Chaar tabs (CEO/Employee × Attendance/Leave) mein har cheez alag alag
- * likhi hui thi — card, badge, filter chip, pagination, empty state. Har
- * jagah thori si alag Tailwind string, is liye tabs badalte hi look badal
- * jata tha.
+ * Across four tabs (CEO/Employee × Attendance/Leave) everything was written
+ * out separately — card, badge, filter chip, pagination, empty state. Each
+ * with a slightly different Tailwind string, so the look shifted the moment
+ * you switched tabs, and every fix had to be repeated everywhere it was
+ * changed with it.
  *
- * Ab wo saare tukre yahan ek jagah hain. Kisi ek jagah rang ya spacing
- * theek karo to poore system mein theek hota hai.
+ * All those pieces now live here in one place. Fix a colour or a spacing
+ * once and it is fixed system-wide.
  *
- * ═══ RANG KA USOOL ═══
- * Pehle HAR container par green border thi (`border-[#05DC7F]/25`). Jab
- * har cheez numayan ho to koi cheez numayan nahi hoti — aankh ko pata hi
- * nahi chalta kahan dekhe.
+ * ═══ THE COLOUR RULE ═══
+ * EVERY container used to carry a green border (`border-[#05DC7F]/25`).
+ * When everything stands out, nothing does — the eye has no idea where
+ * to look.
  *
- * Ab: container KHAMOSH (neutral border), aur green sirf wahan jahan
- * matlab ho — active state, primary action, aur achhi khabar. Status ke
- * rang (green/amber/red/sky) sirf status ke liye mehfooz hain, sajawat
- * ke liye kabhi nahi.
+ * Now: containers are QUIET (a neutral border), and green appears only
+ * where it means something — an active state, a primary action, good
+ * news. Status colours (green/amber/red/sky) are reserved for status
+ * alone, never for decoration.
  */
 
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  Loader2,
+} from "lucide-react";
 import { toneOf } from "./tokens";
 
 const tone = toneOf;
 
 /* ──────────────────────────────────────────
-   Panel — har card ka container
+   Panel — the container for every card
    ────────────────────────────────────────── */
 export function Panel({ title, subtitle, icon: Icon, actions, children, className = "", bodyClass = "" }) {
   const hasHead = title || actions;
@@ -58,10 +66,10 @@ export function Panel({ title, subtitle, icon: Icon, actions, children, classNam
 }
 
 /* ──────────────────────────────────────────
-   IconButton — text ki jagah icon
+   IconButton — an icon instead of text
    ────────────────────────────────────────── */
-// `label` sirf tooltip nahi — screen reader ke liye bhi lazmi hai, warna
-// icon-only button un logon ke liye khali reh jata hai
+// `label` is not just a tooltip — it is required for screen readers, or an
+// icon-only button is simply empty for those users
 export function IconButton({
   icon: Icon,
   label,
@@ -96,7 +104,7 @@ export function IconButton({
 }
 
 /* ──────────────────────────────────────────
-   Button — jahan lafz zaroori hain
+   Button — where words are necessary
    ────────────────────────────────────────── */
 export function Button({
   icon: Icon,
@@ -136,10 +144,10 @@ export function Button({
 }
 
 /* ──────────────────────────────────────────
-   Pill — status ka nishan
+   Pill — the status marker
    ────────────────────────────────────────── */
-// Rang akela kabhi kafi nahi (colour-blind, print, screenshot) — is liye
-// lafz hamesha saath hota hai, aur icon jahan mumkin ho
+// Colour alone is never enough (colour-blindness, print, screenshots) — so
+// the word is always alongside it, and an icon wherever possible
 export function Pill({ tone: t = "muted", icon: Icon, children, title, className = "" }) {
   const c = tone(t);
   return (
@@ -156,7 +164,7 @@ export function Pill({ tone: t = "muted", icon: Icon, children, title, className
 }
 
 /* ──────────────────────────────────────────
-   StatCard — upar wale numbers
+   StatCard — the numbers along the top
    ────────────────────────────────────────── */
 export function StatCard({ icon: Icon, label, value, sub, tone: t = "muted", onClick, active }) {
   const c = tone(t);
@@ -186,7 +194,7 @@ export function StatCard({ icon: Icon, label, value, sub, tone: t = "muted", onC
 }
 
 /* ──────────────────────────────────────────
-   FilterChips — ek hi shakal har jagah
+   FilterChips — one shape everywhere
    ────────────────────────────────────────── */
 export function FilterChips({ options, value, onChange, counts }) {
   return (
@@ -225,6 +233,187 @@ export function FilterChips({ options, value, onChange, counts }) {
 }
 
 /* ──────────────────────────────────────────
+   Select — a dropdown that is actually ours
+   ──────────────────────────────────────────
+   A native <select> paints its option list with the operating system,
+   not with our CSS. On a dark panel that popup came out white while the
+   inherited text stayed white — so every choice was invisible until you
+   hovered it. `color-scheme: dark` fixes that on some platforms and not
+   on others, which is exactly the kind of "works on my machine" we
+   cannot ship.
+
+   So the list here is plain DOM. It uses the same tokens as every other
+   panel and behaves identically everywhere.
+
+   `options` accepts `["a", "b"]` or `[{value, label, hint}]` — `hint` is
+   a second line under the label, for choices that need explaining. */
+export function Select({
+  value,
+  onChange,
+  options,
+  placeholder = "Select…",
+  disabled = false,
+  className = "",
+}) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const boxRef = useRef(null);
+  const listRef = useRef(null);
+
+  const items = options.map((o) =>
+    typeof o === "string" ? { value: o, label: o } : o,
+  );
+  const selectedIndex = items.findIndex(
+    (o) => String(o.value) === String(value),
+  );
+  const current = selectedIndex >= 0 ? items[selectedIndex] : null;
+
+  // ──── Close on an outside click, or on Escape ────
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (!boxRef.current?.contains(e.target)) setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // ──── Keep the highlighted row in view while arrowing ────
+  useEffect(() => {
+    if (!open || active < 0) return;
+    listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+  }, [open, active]);
+
+  const openList = () => {
+    if (disabled) return;
+    setActive(selectedIndex >= 0 ? selectedIndex : 0);
+    setOpen(true);
+  };
+
+  const pick = (opt) => {
+    onChange(opt.value);
+    setOpen(false);
+  };
+
+  // Full keyboard support — a native select has it, so ours must too
+  const onKeyDown = (e) => {
+    if (disabled) return;
+    if (!open) {
+      if (["Enter", " ", "ArrowDown", "ArrowUp"].includes(e.key)) {
+        e.preventDefault();
+        openList();
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => (i + 1) % items.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => (i - 1 + items.length) % items.length);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActive(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActive(items.length - 1);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (items[active]) pick(items[active]);
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={boxRef} className={`relative ${className}`}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => (open ? setOpen(false) : openList())}
+        onKeyDown={onKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`w-full flex items-center justify-between gap-2 rounded-lg border
+          px-3 py-2 text-sm text-left transition
+          ${
+            disabled
+              ? "bg-white/[0.02] border-white/[0.06] text-gray-600 cursor-not-allowed"
+              : open
+                ? "bg-white/[0.06] border-[#05DC7F]/50 text-white"
+                : "bg-white/[0.03] border-white/[0.08] text-white hover:border-white/20"
+          }`}
+      >
+        <span className={`truncate ${current ? "" : "text-gray-500"}`}>
+          {current?.label ?? placeholder}
+        </span>
+        <ChevronDown
+          size={15}
+          className={`shrink-0 text-gray-500 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <ul
+          ref={listRef}
+          role="listbox"
+          className="absolute z-30 mt-1.5 w-full max-h-64 overflow-auto rounded-xl
+            border border-white/[0.12] bg-[#0b100e] p-1 shadow-2xl shadow-black/60"
+        >
+          {items.map((o, i) => {
+            const on = String(o.value) === String(value);
+            // A group header appears only where the group actually changes
+            const newGroup = o.group && o.group !== items[i - 1]?.group;
+            return (
+              <li key={o.value}>
+                {newGroup && (
+                  <p className="px-2.5 pt-2 pb-1 text-gray-600 text-[10px] uppercase tracking-wider">
+                    {o.group}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => pick(o)}
+                  className={`w-full text-left rounded-lg px-2.5 py-2 text-sm
+                    flex items-start gap-2 transition
+                    ${on ? "text-[#05DC7F]" : "text-gray-300"}
+                    ${i === active ? "bg-white/[0.07]" : ""}`}
+                >
+                  <Check
+                    size={14}
+                    className={`mt-0.5 shrink-0 ${on ? "opacity-100" : "opacity-0"}`}
+                  />
+                  <span className="min-w-0">
+                    <span className="block">{o.label}</span>
+                    {o.hint && (
+                      <span className="block text-gray-500 text-[11px] leading-snug mt-0.5">
+                        {o.hint}
+                      </span>
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────
    Pagination
    ────────────────────────────────────────── */
 export function Pagination({ page, totalPages, onChange }) {
@@ -242,7 +431,7 @@ export function Pagination({ page, totalPages, onChange }) {
       </span>
       <IconButton
         icon={ChevronRight}
-        label="Agla page"
+        label="Next page"
         disabled={page === totalPages}
         onClick={() => onChange(Math.min(totalPages, page + 1))}
       />
@@ -269,11 +458,11 @@ export function EmptyState({ icon: Icon, title, hint, action }) {
 }
 
 /* ──────────────────────────────────────────
-   Skeleton — "Loading..." se behtar
+   Skeleton — better than "Loading..."
    ────────────────────────────────────────── */
-// Khali lafz "Loading..." se banda andaza nahi laga sakta ke kitna data
-// aane wala hai. Skeleton aane wali shakal pehle hi bana deta hai, is liye
-// data aane par page uchalta bhi nahi.
+// The bare word "Loading..." gives no clue how much data is coming. A
+// skeleton draws the shape in advance, so the page does not jump when the
+// data arrives.
 export function Skeleton({ className = "h-4 w-full" }) {
   return (
     <div
@@ -285,7 +474,7 @@ export function Skeleton({ className = "h-4 w-full" }) {
 
 export function TableSkeleton({ rows = 5, cols = 4 }) {
   return (
-    <div className="flex flex-col gap-2.5 py-2" aria-label="Load ho raha hai">
+    <div className="flex flex-col gap-2.5 py-2" aria-label="Loading">
       {Array.from({ length: rows }).map((_, r) => (
         <div key={r} className="flex gap-3 items-center">
           {Array.from({ length: cols }).map((_, c) => (
@@ -303,7 +492,7 @@ export function TableSkeleton({ rows = 5, cols = 4 }) {
 }
 
 /* ──────────────────────────────────────────
-   LiveDot — "yeh khud update ho raha hai"
+   LiveDot — "this is updating by itself"
    ────────────────────────────────────────── */
 export function LiveDot({ live, label }) {
   return (
@@ -327,7 +516,7 @@ export function LiveDot({ live, label }) {
 }
 
 /* ──────────────────────────────────────────
-   Th / Td — table ki ek hi shakal
+   Th / Td — one consistent table style
    ────────────────────────────────────────── */
 export function Th({ children, className = "" }) {
   return (

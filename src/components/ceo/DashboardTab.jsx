@@ -12,6 +12,8 @@ import {
   Coffee,
   ArrowRight,
   Hourglass,
+  Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import {
   LineChart,
@@ -28,6 +30,23 @@ import { formatMinutes } from "../../utils/time";
 const API = "http://127.0.0.1:8000";
 
 const pktNow = () => new Date(Date.now() + 5 * 60 * 60 * 1000);
+
+// ──── Paisa ────
+const money = (n) =>
+  n == null
+    ? "—"
+    : Number(n).toLocaleString("en-PK", { maximumFractionDigits: 0 });
+
+// The full figure (1,842,300) overflows a tile at 3xl. Lac/Crore was
+// chosen because the slip's `amount_in_words` uses the same scale — two
+// different conventions in two places would look wrong.
+const moneyShort = (n) => {
+  if (n == null) return "—";
+  const v = Number(n);
+  if (v >= 1e7) return `${(v / 1e7).toFixed(2)} Cr`;
+  if (v >= 1e5) return `${(v / 1e5).toFixed(1)} L`;
+  return money(v);
+};
 
 const fmtDate = (s) => {
   if (!s) return "—";
@@ -48,14 +67,14 @@ const fmtDateTime = (s) =>
         minute: "2-digit",
       });
 
-// ──── Series ke rang — entity ke saath judey, rank ke saath nahi ────
+// ──── Series colours — tied to the entity, not to the rank ────
 const SERIES = {
   present: "#05DC7F",
   absent: "#fb7185",
 };
 
 // ──────────────────────────────────────────
-// Hero figure — aaj kitni team hazir hai
+// Hero figure — how much of the team is present today
 // ──────────────────────────────────────────
 function PresenceRing({ present, total }) {
   const pct = total > 0 ? Math.round((present / total) * 100) : 0;
@@ -157,16 +176,17 @@ export default function DashboardTab() {
   const [trend, setTrend] = useState([]);
   const [pending, setPending] = useState([]);
   const [upcoming, setUpcoming] = useState([]);
+  const [runs, setRuns] = useState([]);
   const [range, setRange] = useState("weekly");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // ══════════════════════════════════════
-  // Sab kuch asal endpoints se
+  // Everything from real endpoints
   // ══════════════════════════════════════
   const fetchAll = useCallback(async () => {
     try {
-      const [rRes, aRes, oRes, pRes, cRes] = await Promise.all([
+      const [rRes, aRes, oRes, pRes, cRes, yRes] = await Promise.all([
         fetch(`${API}/recruitment/dashboard-stats`, { headers: authHeaders }),
         fetch(`${API}/attendance/flags/today`, { headers: authHeaders }),
         fetch(`${API}/attendance/overview?range=${range}`, {
@@ -174,6 +194,7 @@ export default function DashboardTab() {
         }),
         fetch(`${API}/leave/pending`, { headers: authHeaders }),
         fetch(`${API}/leave/calendar`, { headers: authHeaders }),
+        fetch(`${API}/payroll/runs`, { headers: authHeaders }),
       ]);
 
       if (rRes.ok) setStats(await rRes.json());
@@ -181,8 +202,9 @@ export default function DashboardTab() {
       if (oRes.ok) setTrend((await oRes.json()).data || []);
       if (pRes.ok) setPending((await pRes.json()).pending_requests || []);
       if (cRes.ok) setUpcoming((await cRes.json()).leaves || []);
+      if (yRes.ok) setRuns((await yRes.json()).runs || []);
     } catch {
-      setError("Server se connect nahi ho paya");
+      setError("Could not connect to the server");
     }
     setLoading(false);
   }, [authHeaders, range]);
@@ -191,7 +213,7 @@ export default function DashboardTab() {
     fetchAll();
   }, [fetchAll]);
 
-  // ──── Aaj ka data live rakho ────
+  // ──── Keep today's data live ────
   useEffect(() => {
     const id = setInterval(() => {
       if (!document.hidden) fetchAll();
@@ -212,11 +234,34 @@ export default function DashboardTab() {
   const present = sum.present ?? 0;
   const isWorkingDay = todayTeam?.is_working_day !== false;
 
-  // Shift chal rahi ho to "Absent" ka faisla abhi baqi hai — us waqt
-  // laal number dikhana ghalat hai, wo log abhi aa sakte hain
+  // While a shift is running the "Absent" verdict is not final — showing
+  // a red number then is wrong, those people can still arrive
   const shiftState = todayTeam?.shift_state;
   const attendanceFinal = shiftState ? !!shiftState.attendance_final : true;
   const notYetIn = (sum.pending ?? 0) + (sum.upcoming ?? 0);
+
+  // ══════════════════════════════════════
+  // Payroll — only what the CEO's decision is BLOCKING
+  // ══════════════════════════════════════
+  // This dashboard is about "today" (a 30-second refresh); payroll is a
+  // monthly thing. So payroll is not given equal billing — it speaks only
+  // when there is something to DO.
+  //
+  // `pending_approval` means: the slips exist, the money is calculated,
+  // but **no email has gone out**. When the scheduler halts a run on
+  // `_suspicious()` the CEO gets only an EMAIL — and emails get missed.
+  // Payroll can then sit for weeks with nobody noticing. This row closes
+  // that gap.
+  //
+  // `/payroll/runs` already comes back in descending period order
+  const heldRun = useMemo(
+    () => runs.find((r) => r.status === "pending_approval") || null,
+    [runs],
+  );
+  const lastRun = useMemo(
+    () => runs.find((r) => r.status !== "cancelled") || null,
+    [runs],
+  );
 
   const pipeline = stats?.pipeline || {};
   const pipelineRows = [
@@ -247,7 +292,7 @@ export default function DashboardTab() {
         </div>
       )}
 
-      {/* ══════ HERO — aaj ki team ══════ */}
+      {/* ══════ HERO — today's team ══════ */}
       <div
         className="relative overflow-hidden rounded-3xl border border-[#05DC7F]/20
         bg-linear-to-br from-[#05DC7F]/10 via-black/40 to-black/60 p-6 md:p-8"
@@ -259,9 +304,7 @@ export default function DashboardTab() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-gray-400 text-sm">
-                {firstName
-                  ? `Assalam-o-Alaikum, ${firstName}`
-                  : "Assalam-o-Alaikum"}
+                {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
               </p>
               <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#05DC7F]/10 border border-[#05DC7F]/30 text-[#05DC7F] text-[10px]">
                 <span className="relative flex h-1.5 w-1.5">
@@ -276,17 +319,17 @@ export default function DashboardTab() {
               {present}
               <span className="text-gray-600 text-2xl"> / {totalEmp}</span>
               <span className="text-gray-400 text-2xl font-normal ml-2">
-                aaj hazir
+                present today
               </span>
             </h1>
 
             <p className="text-gray-500 text-sm mt-2">
               {!isWorkingDay
-                ? "Aaj working day nahi hai"
-                : `${sum.on_break ?? 0} break par · ${sum.checked_out ?? 0} din mukammal`}
+                ? "Today is not a working day"
+                : `${sum.on_break ?? 0} on break · ${sum.checked_out ?? 0} finished for the day`}
             </p>
 
-            {/* ── Aaj ki tafseel ── */}
+            {/* ── Today's detail ── */}
             <div className="flex flex-wrap gap-x-8 gap-y-3 mt-6">
               {[
                 {
@@ -368,7 +411,7 @@ export default function DashboardTab() {
       </div>
 
       {/* ══════ Company tiles ══════ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Tile
           label="Employees"
           value={stats?.total_employees ?? "—"}
@@ -378,32 +421,45 @@ export default function DashboardTab() {
         <Tile
           label="Departments"
           value={stats?.total_departments ?? "—"}
-          sub="company mein"
+          sub="in the company"
           icon={<Building2 size={15} />}
         />
         <Tile
           label="Open Positions"
           value={stats?.active_openings ?? "—"}
-          sub="hiring chal rahi hai"
+          sub="hiring in progress"
           icon={<Briefcase size={15} />}
           tone={stats?.active_openings > 0 ? "good" : "mute"}
         />
         <Tile
           label="Leave Approvals"
           value={pending.length}
-          sub={pending.length > 0 ? "aap ke jawab ka intezar" : "sab clear"}
+          sub={pending.length > 0 ? "waiting for your response" : "all clear"}
           icon={<ClipboardCheck size={15} />}
           tone={pending.length > 0 ? "warn" : "mute"}
         />
+        {/* A quiet tile — the hero figure stays the presence ring.
+            A large payroll figure would bury today's attendance number */}
+        <Tile
+          label="Payroll"
+          value={lastRun ? moneyShort(lastRun.total_payroll_cost) : "—"}
+          sub={
+            lastRun
+              ? `${lastRun.period} · ${lastRun.employees_done} slips`
+              : "no runs yet"
+          }
+          icon={<Wallet size={15} />}
+          tone={lastRun ? "neutral" : "mute"}
+        />
       </div>
 
-      {/* ══════ Attendance trend — ASAL data ══════ */}
+      {/* ══════ Attendance trend — REAL data ══════ */}
       <div className="rounded-2xl border border-white/8 bg-linear-to-br from-white/5 to-transparent p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
           <div>
             <h2 className="text-white font-semibold">Attendance Trend</h2>
             <p className="text-gray-600 text-xs mt-0.5">
-              {range === "weekly" ? "Pichhle 7 din" : `${monthName} — har din`}
+              {range === "weekly" ? "Last 7 days" : `${monthName} — every day`}
             </p>
           </div>
 
@@ -427,7 +483,7 @@ export default function DashboardTab() {
         <div className="w-full h-[260px]">
           {trend.length === 0 ? (
             <div className="h-full flex items-center justify-center text-gray-500 text-sm">
-              Abhi koi attendance data nahi
+              No attendance data yet
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -489,7 +545,7 @@ export default function DashboardTab() {
 
           {pipelineRows.every((r) => r.value === 0) ? (
             <p className="text-gray-500 text-sm">
-              Abhi koi application nahi — Recruitment tab se job post karein
+              No applications yet — post a job from the Recruitment tab
             </p>
           ) : (
             <div className="flex flex-col gap-4">
@@ -508,7 +564,7 @@ export default function DashboardTab() {
                         {conv != null && (
                           <span className="text-gray-600 font-normal text-xs">
                             {" "}
-                            · {conv}% aage barhe
+                            · {conv}% moved forward
                           </span>
                         )}
                       </span>
@@ -531,19 +587,65 @@ export default function DashboardTab() {
           <div className="flex justify-between items-baseline mb-5">
             <h2 className="text-white font-semibold flex items-center gap-2">
               <Hourglass size={16} className="text-amber-400" />
-              Aap ka jawab chahiye
+              Needs your response
             </h2>
-            {pending.length > 0 && (
+            {pending.length + (heldRun ? 1 : 0) > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/40">
-                {pending.length}
+                {pending.length + (heldRun ? 1 : 0)}
               </span>
             )}
           </div>
 
+          {/* ── Payroll first ── */}
+          {/* A leave request is one person's one day; a blocked payroll is
+              the WHOLE team's whole month — and none of its slips are
+              emailed until the CEO approves. Hence the top spot */}
+          {heldRun && (
+            <div className="mb-4 p-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.07]">
+              <div className="flex items-start gap-2">
+                <AlertTriangle
+                  size={15}
+                  className="text-amber-400 shrink-0 mt-0.5"
+                />
+                <div className="min-w-0">
+                  <p className="text-gray-200 text-sm">
+                    Payroll for {heldRun.period} has not been approved
+                  </p>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {heldRun.employees_done} slips tayyar ·{" "}
+                    {money(heldRun.total_payroll_cost)} PKR ·{" "}
+                    <span className="text-amber-400/90">no email sent</span>
+                  </p>
+
+                  {/* If the scheduler halted it, the reason is written
+                      right here — no waiting for the email */}
+                  {heldRun.error_note && (
+                    <p className="text-amber-400/80 text-[11px] mt-1">
+                      {heldRun.error_note}
+                    </p>
+                  )}
+                  {heldRun.employees_failed > 0 && (
+                    <p className="text-rose-400/90 text-[11px] mt-1">
+                      {heldRun.employees_failed} employee slip(s) failed —
+                      is the salary structure set?
+                    </p>
+                  )}
+
+                  <p className="text-gray-500 text-[11px] mt-1.5 flex items-center gap-1">
+                    Approve &amp; Disburse from the Payroll tab
+                    <ArrowRight size={11} />
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {pending.length === 0 ? (
-            <p className="text-gray-500 text-sm">
-              Koi pending request nahi — sab clear
-            </p>
+            !heldRun && (
+              <p className="text-gray-500 text-sm">
+                No pending requests — all clear
+              </p>
+            )
           ) : (
             <div className="flex flex-col">
               {pending.slice(0, 4).map((p, i) => (
@@ -570,7 +672,7 @@ export default function DashboardTab() {
                   </div>
                   {p.auto_approve_at && (
                     <p className="text-amber-400/80 text-[11px] mt-1">
-                      {fmtDateTime(p.auto_approve_at)} ko khud approve ho jayegi
+                      will auto-approve on {fmtDateTime(p.auto_approve_at)}
                     </p>
                   )}
                 </div>
@@ -578,7 +680,7 @@ export default function DashboardTab() {
 
               {pending.length > 4 && (
                 <p className="text-gray-500 text-xs mt-3 flex items-center gap-1">
-                  aur {pending.length - 4} — Leave tab mein dekhein
+                  {pending.length - 4} more — see the Leave tab
                   <ArrowRight size={11} />
                 </p>
               )}
@@ -587,12 +689,12 @@ export default function DashboardTab() {
         </div>
       </div>
 
-      {/* ══════ Aane wali chhuttiyan ══════ */}
+      {/* ══════ Upcoming leave ══════ */}
       {nextUp.length > 0 && (
         <div className="rounded-2xl border border-white/8 bg-linear-to-br from-white/5 to-transparent p-6">
           <h2 className="text-white font-semibold mb-5 flex items-center gap-2">
             <CalendarDays size={16} className="text-sky-400" />
-            Aane wali chhuttiyan
+            Upcoming leave
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

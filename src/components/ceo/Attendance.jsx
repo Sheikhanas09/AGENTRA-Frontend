@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
-// Poore system mein ek hi icon set — pehle CEO ke do tabs Font Awesome
-// use karte the aur baqi sab Lucide. FA bhare hue icons hain, Lucide
-// patli lakeer ke — dono ek saath dekhne mein saaf pata chalta tha ke
-// yeh do alag jagah se bane hain.
+// One icon set across the whole system — two CEO tabs used to use Font
+// Awesome while everything else used Lucide. FA icons are filled, Lucide
+// are thin-line — side by side it was obvious they came from two
+// different places.
 import {
   Users,
   UserCheck,
@@ -44,19 +44,19 @@ import {
 const API = "http://127.0.0.1:8000";
 
 // ──────────────────────────────────────────
-// "Aaj" ka faisla SERVER karta hai
+// The SERVER decides what "today" is
 // ──────────────────────────────────────────
-// Do wajah se:
-//  1. toISOString() UTC date deta hai — raat 12:32 AM PKT pe wo abhi
-//     PICHHLA din hota hai (7:32 PM UTC)
-//  2. Raat ki shift (22:00-05:00) mein attendance ka din SHIFT ka din hota
-//     hai, calendar ka nahi. 12 baje ke baad bhi wo pichhla din rehta hai —
-//     agli date ki attendance abhi shuru hi nahi hui hoti.
+// Two reasons:
+//  1. toISOString() gives a UTC date — at 12:32 AM PKT that is still the
+//     PREVIOUS day (7:32 PM UTC)
+//  2. On a night shift (22:00-05:00) the attendance day is the SHIFT's day,
+//     not the calendar's. Past midnight it is still the previous day — the
+//     next date's attendance has not even started.
 //
-// Isliye pehli baar report_date bheja hi nahi jata: server apna work date
-// batata hai aur date picker usi se set hota hai.
+// So report_date is not sent on the first fetch at all: the server states
+// its own work date and the date picker is set from that.
 
-// ──── Poll interval — check-in/out foran nazar aaye ────
+// ──── Poll interval — a check-in/out should show up immediately ────
 const LIVE_REFRESH_MS = 10000;
 
 // ──────────────────────────────────────────
@@ -85,10 +85,10 @@ function CustomTooltip({ active, payload, label }) {
 // ──────────────────────────────────────────
 function LocationBadge({ lat, lng, verified, distance, note }) {
   if (lat == null || lng == null) {
-    // ──── GPS mili hi nahi ────
+    // ──── No GPS at all ────
     if (note === "gps_unavailable") {
       return (
-        <span title="Employee ne GPS permission nahi di ya location nahi mili" className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30"
+        <span title="The employee denied GPS permission, or no location was available" className="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30"
         >
           No GPS
         </span>
@@ -112,10 +112,10 @@ function LocationBadge({ lat, lng, verified, distance, note }) {
       : `Outside${distance != null ? ` · ${Math.round(distance)}m` : ""}`;
 
   const title = {
-    gps_unreliable: "GPS accuracy bohot kam thi — verification skip kiya",
-    office_not_set: "Office location set nahi hai",
-    in_range: "Office radius ke andar",
-    out_of_range: "Office radius se bahar",
+    gps_unreliable: "GPS accuracy was too poor — verification was skipped",
+    office_not_set: "No office location is set",
+    in_range: "Inside the office radius",
+    out_of_range: "Outside the office radius",
   }[note];
 
   return (
@@ -148,7 +148,7 @@ export default function Attendance() {
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Khali = "server tu bata aaj kaunsa din hai" (raat ki shift ke liye zaroori)
+  // Empty = "server, tell us what day it is" (essential for night shifts)
   const [todayStr, setTodayStr] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [isOvernight, setIsOvernight] = useState(false);
@@ -173,15 +173,15 @@ export default function Attendance() {
   );
 
   // ──────────────────────────────────────
-  // Team attendance (kisi bhi din ka)
+  // Team attendance (for any day)
   // ──────────────────────────────────────
-  // silent = background refresh, "Loading..." flash nahi hoga
+  // silent = a background refresh, with no "Loading..." flash
   const fetchAttendance = useCallback(
     async ({ silent = false } = {}) => {
       if (!silent) setLoading(true);
       setError("");
       try {
-        // selectedDate khali ho to server apna work date istemal karega
+        // With selectedDate empty the server uses its own work date
         const res = await fetch(
           `${API}/attendance/flags/today${
             selectedDate ? `?report_date=${selectedDate}` : ""
@@ -191,7 +191,7 @@ export default function Attendance() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.detail || "Attendance load nahi hui");
+          setError(data.detail || "Could not load the attendance");
           if (!silent) setEmployees([]);
           setLoading(false);
           return;
@@ -207,21 +207,21 @@ export default function Attendance() {
         setIsOvernight(!!data.policy?.is_overnight);
         setShiftState(data.shift_state || null);
 
-        // ──── "Aaj" server ka work date hai ────
-        // Raat ki shift mein 12 baje ke baad bhi yeh pichhla din rehta hai,
-        // isliye kabhi bhi apni calendar date par bharosa nahi karte.
+        // ──── "Today" is the server's work date ────
+        // On a night shift this stays the previous day even past midnight,
+        // so we never trust our own calendar date.
         if (!selectedDate) {
           setTodayStr(data.date);
           setSelectedDate(data.date);
         } else if (selectedDate === todayStr && data.date !== todayStr) {
-          // live view khula tha aur shift badal gayi — aage khisak jao
+          // The live view was open and the shift rolled over — move forward
           setTodayStr(data.date);
           setSelectedDate(data.date);
         }
 
         if (!silent) setCurrentPage(1);
       } catch {
-        setError("Server se connect nahi ho paya");
+        setError("Could not connect to the server");
       }
       setLoading(false);
     },
@@ -229,7 +229,7 @@ export default function Attendance() {
   );
 
   // ──────────────────────────────────────
-  // Chart data (real — dummy nahi)
+  // Chart data (real, not dummy)
   // ──────────────────────────────────────
   const fetchOverview = useCallback(async () => {
     setChartLoading(true);
@@ -254,20 +254,20 @@ export default function Attendance() {
   }, [fetchOverview]);
 
   // ──────────────────────────────────────
-  // LIVE — employee check-in/out kare to foran row update
+  // LIVE — a check-in/out updates the row immediately
   // ──────────────────────────────────────
   useEffect(() => {
-    if (!isLive) return; // purane din ka data live nahi hota
+    if (!isLive) return; // data from a past day is never live
 
     const tick = () => {
-      // ──── Tab background mein ho to poll na karo ────
+      // ──── Do not poll while the tab is in the background ────
       if (document.hidden) return;
       fetchAttendance({ silent: true });
     };
 
     const interval = setInterval(tick, LIVE_REFRESH_MS);
 
-    // ──── Wapis tab pe aate hi turant refresh ────
+    // ──── Refresh the moment the tab is focused again ────
     const onFocus = () => fetchAttendance({ silent: true });
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
@@ -280,19 +280,19 @@ export default function Attendance() {
   }, [isLive, fetchAttendance]);
 
   // ──────────────────────────────────────
-  // Photo (auth header chahiye — direct src se nahi chalega)
+  // Photo (needs an auth header — a plain src will not work)
   // ──────────────────────────────────────
   const openPhoto = async (path, name, label) => {
     try {
       const res = await fetch(`${API}${path}`, { headers: authHeaders });
       if (!res.ok) {
-        setError("Photo available nahi hai");
+        setError("Photo is not available");
         return;
       }
       const blob = await res.blob();
       setPhoto({ url: URL.createObjectURL(blob), name, label });
     } catch {
-      setError("Photo load nahi hui");
+      setError("Could not load the photo");
     }
   };
 
@@ -324,9 +324,9 @@ export default function Attendance() {
     currentPage * itemsPerPage,
   );
 
-  // Laal sirf ASAL absence ke liye — jo abhi aa sakta hai wo neutral hai.
-  // Rang ab kit ke tones se aate hain, is liye har tab mein "Present" ka
-  // hara ek jaisa hi hara hai.
+  // Red is only for a REAL absence — anyone who can still arrive is
+  // neutral. Colours now come from the kit's tones, so "Present" green is
+  // the same green on every tab.
   const statusTone = {
     Present: "ok",
     Late: "warn",
@@ -337,14 +337,14 @@ export default function Attendance() {
     Upcoming: "muted",
   };
 
-  // Stat card aur filter chip dono yahi chalate hain — page reset
-  // dono jagah lazmi hai warna khali page dikh jata hai
+  // Both the stat cards and the filter chips drive this — resetting the
+  // page is required in both, or an empty page appears
   const pickFilter = (f) => {
     setFilter(f);
     setCurrentPage(1);
   };
 
-  // Har filter mein kitne log hain — chip par dikhane ke liye
+  // How many people fall under each filter — shown on the chip
   const filterCounts = useMemo(() => {
     const c = { All: employees.length };
     for (const e of employees) {
@@ -353,7 +353,7 @@ export default function Attendance() {
     return c;
   }, [employees]);
 
-  // Absent abhi "pakka" hai ya shift chal rahi hai?
+  // Is "Absent" settled yet, or is the shift still running?
   const attendanceFinal = shiftState ? !!shiftState.attendance_final : true;
   const pendingCount = summary.pending ?? 0;
   const upcomingCount = summary.upcoming ?? 0;
@@ -375,34 +375,34 @@ export default function Attendance() {
       return {
         icon: "🕐",
         cls: "bg-sky-500/10 border-sky-500/30 text-sky-300",
-        title: `Shift abhi shuru nahi hui — check-in ${to12h(opens_at)} par khulega`,
+        title: `The shift has not started — check-in opens at ${to12h(opens_at)}`,
         detail:
-          "Is liye abhi koi Absent mark nahi hai. Faisla shift khatam hone par hoga.",
+          "So nobody is marked Absent yet. That is decided once the shift ends.",
       };
 
     if (reason === "open")
       return {
         icon: "🟢",
         cls: "bg-[#05DC7F]/10 border-[#05DC7F]/30 text-[#05DC7F]",
-        title: `Check-in window khula hai — ${to12h(opens_at)} se ${to12h(closes_at)}`,
-        detail: `${pendingCount} employee abhi tak nahi aaye. Window band hone tak wo Absent nahi ginay jayenge.`,
+        title: `The check-in window is open — ${to12h(opens_at)} to ${to12h(closes_at)}`,
+        detail: `${pendingCount} employee(s) have not arrived yet. They are not counted Absent until the window closes.`,
       };
 
     if (reason === "shift_ended")
       return {
         icon: "🔒",
         cls: "bg-red-500/10 border-red-500/30 text-red-300",
-        title: "Check-in window band — is din ki attendance final hai",
-        detail: `Shift ${to12h(policy?.shift_start)} se ${to12h(policy?.shift_end)} thi. Jo nahi aaye wo ab Absent hain.`,
+        title: "The check-in window is closed — this day's attendance is final",
+        detail: `The shift ran ${to12h(policy?.shift_start)} to ${to12h(policy?.shift_end)}. Anyone who did not arrive is now Absent.`,
       };
 
     if (reason === "not_enforced")
       return {
         icon: "⚙️",
         cls: "bg-yellow-500/10 border-yellow-500/30 text-yellow-300",
-        title: "Shift window enforce nahi ho raha",
+        title: "The shift window is not being enforced",
         detail:
-          "Employees kisi bhi waqt check-in kar sakte hain. Settings mein 'Shift window enforce karein' on karein taake Absent ka waqt tay ho.",
+          "Employees can check in at any time. Turn on 'Enforce shift window' in Settings so that Absent has a fixed cut-off.",
       };
 
     return null;
@@ -435,7 +435,7 @@ export default function Attendance() {
       )}
 
       {/* ── Active Policy Bar ── */}
-      {/* Yeh wahi rules hain jo backend har check-in/out pe apply karta hai */}
+      {/* These are the same rules the backend applies on every check-in/out */}
       <div className="rounded-xl border border-[#05DC7F]/20 bg-black/30 px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
         <span className="text-gray-500 font-semibold uppercase tracking-wide">
           Active Policy
@@ -455,7 +455,7 @@ export default function Attendance() {
                 +{formatMinutes(policy.late_tolerance_mins)}
               </span>
             </span>
-            <span className="text-gray-400" title="Is window ke bahar check-in nahi ho sakta — employee absent rahega"
+            <span className="text-gray-400" title="No check-in is possible outside this window — the employee stays absent"
             >
               Check-in window{" "}
               {policy.enforce_shift_window === false ? (
@@ -484,14 +484,14 @@ export default function Attendance() {
               Breaks{" "}
               <span className="text-white">
                 {policy.break_policy === "excluded"
-                  ? "hours se minus"
-                  : "hours mein shamil"}
+                  ? "deducted from hours"
+                  : "included in hours"}
               </span>
             </span>
           </>
         ) : (
           <span className="text-yellow-400">
-            Work policy set nahi — Settings mein jaa kar set karein
+            No work policy is set — set one from Settings
           </span>
         )}
 
@@ -504,12 +504,12 @@ export default function Attendance() {
           </span>
         ) : (
           <span className="text-yellow-400">
-            Office location set nahi — GPS verification skip ho raha hai
+            No office location is set — GPS verification is being skipped
           </span>
         )}
       </div>
 
-      {/* ── Shift ka status — CEO ko pata rahe ke Absent final hai ya nahi ── */}
+      {/* ── Shift state — so the CEO knows whether Absent is final ── */}
       {isLive && shiftState && shiftBanner && (
         <div className={`rounded-xl px-4 py-3 text-sm flex items-start gap-3 border ${shiftBanner.cls}`}
         >
@@ -522,38 +522,38 @@ export default function Attendance() {
       )}
 
       {/* ── Stats ──
-          Card ab CLICKABLE hai aur neeche wale filter se juda hua hai.
-          Pehle CEO ko "5 late" dikhta tha magar yeh dekhne ke liye ke
-          wo kaun hain, alag se filter dhoondna parta tha. */}
+          The card is now CLICKABLE and wired to the filter below.
+          The CEO used to see "5 late" but had to go hunting for a filter
+          to find out who they were. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Users}
           label="Total"
           value={summary.total_employees ?? 0}
-          sub={`${(policy?.working_days || []).length || 7} din ka hafta`} onClick={() => pickFilter("All")}
+          sub={`${(policy?.working_days || []).length || 7}-day week`} onClick={() => pickFilter("All")}
           active={filter === "All"} />
         <StatCard icon={UserCheck}
           label="Present"
           value={summary.present ?? 0}
-          sub={`${summary.on_break ?? 0} break par · ${summary.checked_out ?? 0} mukammal`}
+          sub={`${summary.on_break ?? 0} on break · ${summary.checked_out ?? 0} finished`}
           tone={(summary.present ?? 0) > 0 ? "ok" : "muted"} onClick={() => pickFilter("Present")}
           active={filter === "Present"} />
-        {/* Shift chal rahi ho to "Absent" abhi faisla nahi — us waqt
-            "Not Checked In" dikhao, warna asal Absent count */}
+        {/* While the shift runs "Absent" is not settled — at that point
+            show "Not Checked In", otherwise the real Absent count */}
         {!attendanceFinal && (pendingCount > 0 || upcomingCount > 0) ? (
           <StatCard icon={UserX}
             label="Not in yet"
             value={pendingCount + upcomingCount}
             sub={
               upcomingCount > 0 && pendingCount === 0
-                ? "Shift shuru nahi hui"
-                : "Abhi aa sakte hain"
+                ? "The shift has not started"
+                : "Can still arrive"
             } onClick={() => pickFilter("Not Checked In")}
             active={filter === "Not Checked In"} />
         ) : (
           <StatCard icon={UserX}
             label="Absent"
             value={summary.absent ?? 0}
-            sub={`${summary.on_leave ?? 0} approved leave par`}
+            sub={`${summary.on_leave ?? 0} on approved leave`}
             tone={(summary.absent ?? 0) > 0 ? "bad" : "muted"} onClick={() => pickFilter("Absent")}
             active={filter === "Absent"} />
         )}
@@ -581,8 +581,8 @@ export default function Attendance() {
             onChange={setActiveView} />
         }
       >
-        {/* Do series hain, is liye legend hamesha maujood — rang akela
-            kaafi nahi hota */}
+        {/* There are two series, so the legend is always present — colour
+            alone is never enough */}
         <div className="flex items-center gap-4 mb-3 text-[11px] text-gray-400">
           <span className="inline-flex items-center gap-1.5">
             <i className="w-3 h-0.5 rounded bg-[#05DC7F]" /> Present
@@ -601,8 +601,8 @@ export default function Attendance() {
               ))}
             </div>
           ) : chartData.length === 0 ? (
-            <EmptyState icon={TrendingUp} title="Abhi koi attendance data nahi"
-              hint="Employees check-in karna shuru karenge to yahan rujhan dikhega." />
+            <EmptyState icon={TrendingUp} title="No attendance data yet"
+              hint="Once employees start checking in, the trend will appear here." />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
@@ -644,7 +644,7 @@ export default function Attendance() {
       </Panel>
 
       {/* ── Table ── */}
-      <Panel title={isLive ? "Aaj ki Attendance" : "Attendance"}
+      <Panel title={isLive ? "Today's Attendance" : "Attendance"}
         subtitle={
           lastUpdated
             ? `Updated ${lastUpdated.toLocaleTimeString("en-US", {
@@ -656,8 +656,8 @@ export default function Attendance() {
         }
         actions={
           <>
-            {/* Date picker — icon hi kafi hai, "Date" likhne ki zarurat nahi */}
-            <label title="Kisi aur din ki attendance dekhein" className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08]
+            {/* Date picker — the icon is enough, no need to write "Date" */}
+            <label title="View another day's attendance" className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08]
                 bg-white/[0.03] px-3 py-2 cursor-pointer hover:border-white/20 transition"
             >
               <Calendar size={14} className="text-gray-400 shrink-0" />
@@ -668,13 +668,13 @@ export default function Attendance() {
             </label>
 
             <IconButton icon={RefreshCw}
-              label="Dobara load karein"
+              label="Reload"
               busy={loading} onClick={() => fetchAttendance()} />
           </>
         }
         bodyClass="pt-0"
       >
-        {/* ── Us din ki halat — sab nishan ek jagah ── */}
+        {/* ── That day's state — every marker in one place ── */}
         <div className="flex items-center gap-2 flex-wrap mb-4">
           {isLive && (
             <LiveDot live
@@ -687,9 +687,9 @@ export default function Attendance() {
           )}
           {isOvernight && isLive && (
             <Pill tone="info"
-              icon={Moon} title="Raat ki shift aadhi raat paar karti hai — attendance us din ki ginti hai jis din shift SHURU hui"
+              icon={Moon} title="A night shift crosses midnight — the attendance counts against the day the shift STARTED"
             >
-              Night shift — {selectedDate} ka din
+              Night shift — day of {selectedDate}
             </Pill>
           )}
 
@@ -704,17 +704,17 @@ export default function Attendance() {
         {loading ? (
           <TableSkeleton rows={6} cols={5} />
         ) : employees.length === 0 ? (
-          <EmptyState icon={UserRound} title="Is company mein koi employee nahi"
-            hint="Create User tab se employee banayein — phir un ki attendance yahan aayegi." />
+          <EmptyState icon={UserRound} title="This company has no employees"
+            hint="Add employees from the Create User tab — their attendance will then appear here." />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={Search} title={`"${filter}" mein koi employee nahi`}
-            hint="Doosra filter chunein ya sab dekhne ke liye All par jayein." />
+          <EmptyState icon={Search} title={`No employees under "${filter}"`}
+            hint="Try another filter, or go to All to see everyone." />
         ) : (
           <>
             <div className="overflow-x-auto -mx-5 px-5">
               <table className="min-w-full border-collapse">
-                {/* Header sticky hai — lambi list scroll karte waqt column
-                    ke naam nazar se ojhal nahi hote */}
+                {/* The header is sticky — column names stay visible while
+                    scrolling a long list */}
                 <thead className="sticky top-0 z-10 bg-[#0b0f0d]/95 backdrop-blur">
                   <tr className="border-b border-white/[0.08]">
                     <Th>Employee</Th>
@@ -821,7 +821,7 @@ export default function Attendance() {
                               <Camera size={11} /> Out
                             </button>
                           )}
-                          {/* ── Enrolled face — check-in photo se compare karne ke liye ── */}
+                          {/* ── The enrolled face — to compare with the check-in photo ── */}
                           <button onClick={() =>
                               openPhoto(
                                 `/attendance/enrollment-photo/${emp.employee_id}`,
@@ -854,7 +854,7 @@ export default function Attendance() {
                             </span>
                           )}
                           {emp.is_early_checkout && (
-                            <span title={`Shift end se ${formatMinutes(emp.early_checkout_minutes)} pehle nikal gaya`} className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30"
+                            <span title={`Left ${formatMinutes(emp.early_checkout_minutes)} before the shift ended`} className="px-2 py-0.5 text-xs rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30"
                             >
                               Early {formatMinutes(emp.early_checkout_minutes)}
                             </span>
