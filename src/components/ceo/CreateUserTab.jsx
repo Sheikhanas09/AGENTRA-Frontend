@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FaUserPlus,
   FaKey,
@@ -22,11 +22,24 @@ function generatePassword(length = 10) {
 }
 
 export default function CreateUser() {
+  // ──── What this company already calls things ────
+  // The department field used to be a dropdown written into this file,
+  // and it mixed the two ideas up: "Frontend Developer" sat in it beside
+  // "Finance". Every employee created that way put a job title in the
+  // department column, and the console then reported "the Backend
+  // Developer department has 2 people".
+  //
+  // Nothing is listed here now. Both fields suggest the values the
+  // company is already using, and accept a new one typed in — so the
+  // first department a company creates is theirs, not ours.
+  const [known, setKnown] = useState({ departments: [], designations: [] });
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    department: "Frontend Developer",
+    department: "",
+    designation: "",
     joiningDate: "",
     password: "",
     // ──── Salary — set at hiring time ────
@@ -39,6 +52,26 @@ export default function CreateUser() {
 
   const [autoPassword, setAutoPassword] = useState(true);
   const [createdUsers, setCreatedUsers] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch("http://127.0.0.1:8000/ceo/employees", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.employees) return;
+        const uniq = (key) =>
+          [...new Set(data.employees.map((e) => e[key]).filter(Boolean))].sort();
+        setKnown({
+          departments: uniq("department"),
+          designations: uniq("designation"),
+        });
+      })
+      .catch(() => {});
+  }, []);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,6 +116,11 @@ export default function CreateUser() {
             email: formData.email,
             phone: formData.phone,
             department: formData.department,
+            // What they do inside the department. Separate from it on
+            // purpose: the console counts people BY department, and a
+            // job title in that column produces "the Backend Developer
+            // department has 2 people".
+            designation: formData.designation || null,
             joining_date:
               formData.joiningDate || new Date().toISOString().split("T")[0],
             password: finalPassword,
@@ -162,7 +200,8 @@ export default function CreateUser() {
         name: "",
         email: "",
         phone: "",
-        department: "Frontend Developer",
+        department: "",
+        designation: "",
         joiningDate: "",
         password: "",
         baseSalary: "",
@@ -258,20 +297,49 @@ export default function CreateUser() {
           <div className="w-full">
             <label className="text-gray-400 text-sm flex items-center gap-2">
               <FaBuilding className="text-[#05DC7F]" /> Department
+              <span className="text-white/30 text-xs">
+                (where they sit — e.g. Engineering)
+              </span>
             </label>
-            <select
+            <input
+              type="text"
               name="department"
+              list="known-departments"
               value={formData.department}
               onChange={handleChange}
+              placeholder="e.g. Engineering"
+              required
               className="input-style"
-            >
-              <option>Frontend Developer</option>
-              <option>Backend Developer</option>
-              <option>UI/UX Designer</option>
-              <option>Human Resources</option>
-              <option>Finance</option>
-              <option>Marketing</option>
-            </select>
+            />
+            <datalist id="known-departments">
+              {known.departments.map((d) => (
+                <option key={d} value={d} />
+              ))}
+            </datalist>
+          </div>
+
+          {/* DESIGNATION — the role inside the department */}
+          <div className="w-full">
+            <label className="text-gray-400 text-sm flex items-center gap-2">
+              <FaBuilding className="text-[#05DC7F]" /> Designation
+              <span className="text-white/30 text-xs">
+                (role within the department)
+              </span>
+            </label>
+            <input
+              type="text"
+              name="designation"
+              list="known-designations"
+              value={formData.designation}
+              onChange={handleChange}
+              placeholder="e.g. Backend Developer"
+              className="input-style"
+            />
+            <datalist id="known-designations">
+              {known.designations.map((d) => (
+                <option key={d} value={d} />
+              ))}
+            </datalist>
           </div>
 
           {/* JOINING DATE */}

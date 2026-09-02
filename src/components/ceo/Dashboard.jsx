@@ -13,6 +13,8 @@ import Hiring from "./Hiring";
 import Settings from "./Settings";
 import PayrollTab from "./PayrollTab";
 import HiredEmployeesTab from "./HiredEmployeesTab";
+import RequestsTab from "./RequestsTab";
+import HrConsoleTab from "./HrConsoleTab";
 
 import {
   FaTachometerAlt,
@@ -25,7 +27,7 @@ import {
 } from "react-icons/fa";
 import { LuSettings2 } from "react-icons/lu";
 import { HiOutlineUserGroup } from "react-icons/hi2";
-import { MdOutlineTouchApp } from "react-icons/md";
+import { MdOutlineTouchApp, MdOutlineInbox, MdOutlineSupportAgent } from "react-icons/md";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
@@ -84,6 +86,8 @@ export default function Dashboard() {
     { name: "Attendance", icon: <FaUserAlt size={20} /> },
     { name: "Leave Managment", icon: <FaFileAlt size={20} /> },
     { name: "Payroll", icon: <FaDollarSign size={20} /> },
+    { name: "Requests", icon: <MdOutlineInbox size={20} /> },
+    { name: "HR Console", icon: <MdOutlineSupportAgent size={20} /> },
     { name: "Settings", icon: <LuSettings2 size={20} /> },
   ];
 
@@ -97,6 +101,8 @@ export default function Dashboard() {
     Attendance: <Attendance />,
     "Leave Managment": <LeaveManagment />,
     Payroll: <PayrollTab />,
+    Requests: <RequestsTab />,
+    "HR Console": <HrConsoleTab />,
     Settings: (
       <div>
         <Settings />
