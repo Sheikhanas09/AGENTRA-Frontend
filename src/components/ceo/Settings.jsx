@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   FaUser,
   FaEnvelope,
@@ -153,6 +153,74 @@ export default function Settings() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("profile");
+
+  // ──── Integrations (this company's own Google account) ────
+  const [integration, setIntegration] = useState(null);
+  const [integrationBusy, setIntegrationBusy] = useState(false);
+
+  const loadIntegration = useCallback(async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/integrations/status", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (res.ok) setIntegration(await res.json());
+    } catch {
+      /* the panel shows "unknown" rather than breaking the page */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "integrations") loadIntegration();
+  }, [activeTab, loadIntegration]);
+
+  // ──── Connect ────
+  // The CEO has to approve at Google in their OWN browser, so this
+  // fetches the URL and then sends them there. The server never sees
+  // their Google password, and this app never stores one.
+  const connectGoogle = async () => {
+    setIntegrationBusy(true);
+    try {
+      const res = await fetch(
+        "http://127.0.0.1:8000/integrations/google/connect",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || "Could not start the connection");
+        setIntegrationBusy(false);
+        return;
+      }
+      window.location.href = data.auth_url;
+    } catch {
+      setError("Could not reach the server");
+      setIntegrationBusy(false);
+    }
+  };
+
+  const disconnectGoogle = async () => {
+    if (
+      !window.confirm(
+        "Disconnect Google?\n\n" +
+          "Applications can no longer be fetched, and no interview " +
+          "invitation, offer letter or payslip email will be sent until " +
+          "an account is connected again.",
+      )
+    )
+      return;
+    setIntegrationBusy(true);
+    try {
+      await fetch("http://127.0.0.1:8000/integrations/google", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      await loadIntegration();
+    } finally {
+      setIntegrationBusy(false);
+    }
+  };
   // ──── Office Location ────
   const [officeLocation, setOfficeLocation] = useState({
     office_name: "Head Office",
@@ -669,7 +737,13 @@ export default function Settings() {
     <div className="max-w-4xl mx-auto mt-6">
       {/* ──── Tabs ──── */}
       <div className="flex gap-2 mb-6">
-        {["profile", "work-policy", "policy-doc", "office-location"].map(
+        {[
+          "profile",
+          "work-policy",
+          "policy-doc",
+          "office-location",
+          "integrations",
+        ].map(
           (tab) => (
             <button
               key={tab}
@@ -687,7 +761,9 @@ export default function Settings() {
                   ? "Working Hours"
                   : tab === "policy-doc"
                     ? "Policy Document"
-                    : "Office Location"}
+                    : tab === "office-location"
+                      ? "Office Location"
+                      : "Integrations"}
             </button>
           ),
         )}
@@ -1464,6 +1540,146 @@ export default function Settings() {
         </div>
       )}
       {/* ══════════ TAB 4: OFFICE LOCATION ══════════ */}
+      {/* ════════════════════════════════════════════
+          Integrations — this company's own Google account
+          ════════════════════════════════════════════ */}
+      {activeTab === "integrations" && (
+        <div className="bg-black/40 border border-[#05DC7F]/20 rounded-2xl p-6">
+          <h2 className="text-white text-xl font-bold mb-2">
+            Google Workspace
+          </h2>
+          <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+            Agentra uses your company&apos;s own Google account for three
+            things: reading job applications from your inbox, creating the
+            interview event and its Meet link on your calendar, and sending
+            email — interview invitations, offer letters, rejections, leave
+            decisions and payslips — <b>from your address</b>.
+            <br />
+            <br />
+            Nothing is shared with any other company on Agentra, and no
+            password is stored: you approve access at Google, and it can be
+            withdrawn from your Google account at any time.
+          </p>
+
+          {integration === null ? (
+            <div className="text-gray-500 text-sm">Loading…</div>
+          ) : integration.connected ? (
+            <>
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-[#05DC7F]/10 border border-[#05DC7F]/30 mb-4">
+                <span className="text-[#05DC7F] text-lg leading-none">●</span>
+                <div>
+                  <div className="text-white font-semibold">
+                    {integration.account_email || "Connected"}
+                  </div>
+                  <div className="text-gray-400 text-xs mt-1">
+                    Connected{" "}
+                    {integration.connected_at
+                      ? integration.connected_at.slice(0, 16)
+                      : ""}
+                  </div>
+                </div>
+              </div>
+
+              {/* What each granted permission actually buys, in the
+                  CEO's terms. Google lets people approve some and not
+                  others, so this has to be read from what was GRANTED
+                  rather than from what was asked for. */}
+              <div className="grid gap-2 mb-4">
+                {[
+                  ["read_applications", "Read job applications from your inbox"],
+                  ["calendar_and_meet", "Create interview events and Meet links"],
+                  ["send_email", "Send email from your company address"],
+                ].map(([key, label]) => (
+                  <div
+                    key={key}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <span
+                      className={
+                        integration.features?.[key]
+                          ? "text-[#05DC7F]"
+                          : "text-amber-400"
+                      }
+                    >
+                      {integration.features?.[key] ? "✓" : "✕"}
+                    </span>
+                    <span
+                      className={
+                        integration.features?.[key]
+                          ? "text-gray-300"
+                          : "text-amber-400"
+                      }
+                    >
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {!integration.can_send_email && (
+                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/40 text-amber-300 text-sm">
+                  {integration.email_detail}
+                  <br />
+                  <span className="text-amber-400/80">
+                    Press Reconnect and allow the missing permission — Google
+                    cannot add one to an approval that has already been given.
+                  </span>
+                </div>
+              )}
+
+              {integration.last_error && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/40 text-red-300 text-sm">
+                  {integration.last_error}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={connectGoogle}
+                  disabled={integrationBusy}
+                  className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black font-semibold text-sm disabled:opacity-50"
+                >
+                  {integrationBusy ? "Opening Google…" : "Reconnect"}
+                </button>
+                <button
+                  onClick={disconnectGoogle}
+                  disabled={integrationBusy}
+                  className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/40 font-semibold text-sm disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-5 text-amber-300 text-sm">
+                No Google account is connected. Fetching applications,
+                interview invitations, offer letters and payslip emails will
+                not work until one is.
+              </div>
+
+              {integration.secrets_configured === false && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/40 text-red-300 text-sm">
+                  The server is missing INTEGRATION_SECRET_KEY, so a Google
+                  token cannot be stored safely. Ask your administrator to
+                  set it before connecting.
+                </div>
+              )}
+
+              <button
+                onClick={connectGoogle}
+                disabled={
+                  integrationBusy || integration.secrets_configured === false
+                }
+                className="px-5 py-2.5 rounded-xl bg-[#05DC7F] text-black font-semibold text-sm disabled:opacity-50"
+              >
+                {integrationBusy ? "Opening Google…" : "Connect Google"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {activeTab === "office-location" && (
         <div className="p-6 bg-black/50 border border-[#05DC7F]/30 rounded-2xl">
           <h2 className="text-white text-xl font-bold mb-2">Office Location</h2>

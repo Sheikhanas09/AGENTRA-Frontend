@@ -31,6 +31,14 @@ export default function Login() {
         return;
       }
 
+      // ──── One user at a time in this browser ────
+      // Signing in as a different account used to leave the previous
+      // one's full_name, department and company_name behind, because
+      // each is only overwritten when the new response happens to
+      // include it. On a shared machine that showed one company's name
+      // above another company's data.
+      localStorage.clear();
+
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("full_name", data.full_name);
@@ -38,6 +46,14 @@ export default function Login() {
       if (data.department) localStorage.setItem("department", data.department);
       if (data.company_name)
         localStorage.setItem("company_name", data.company_name);
+
+      // ──── Which company, for display only ────
+      // Every request is scoped on the server from the token and the
+      // user's row; the browser never says which company it wants. This
+      // is here so a screen can show "TechTribe" without another call,
+      // and nothing is authorised by it.
+      if (data.company_id != null)
+        localStorage.setItem("company_id", data.company_id);
 
       if (data.role === "superadmin") navigate("/admin/dashboard");
       else if (data.role === "ceo") navigate("/ceo/dashboard");

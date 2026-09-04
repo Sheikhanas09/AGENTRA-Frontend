@@ -203,6 +203,23 @@ export default function AllCandidatesTab({ onShortlist }) {
                 {fetchResult.total_fetched}
               </strong>
             </span>
+            {/* "Fetched" counts APPLICANTS. It used to be the raw
+                message count, so one person who mailed eleven times
+                read as eleven applicants and then two appeared in the
+                list below — as if nine had been lost. Nothing was lost;
+                the extras are shown here instead of being hidden. */}
+            {fetchResult.duplicates_skipped > 0 && (
+              <span>
+                ✉️ Emails:{" "}
+                <strong className="text-white">
+                  {fetchResult.emails_found}
+                </strong>{" "}
+                <span className="text-gray-500">
+                  ({fetchResult.duplicates_skipped} duplicate
+                  {fetchResult.duplicates_skipped === 1 ? "" : "s"})
+                </span>
+              </span>
+            )}
             <span>
               🤖 Screened:{" "}
               <strong className="text-white">{fetchResult.screened}</strong>

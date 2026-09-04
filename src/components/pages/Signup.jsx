@@ -52,8 +52,14 @@ export default function Signup() {
         return;
       }
 
-      setSuccess("The request has been sent! Please wait for admin approval.");
-      setTimeout(() => navigate("/"), 3000);
+      // Signing up registers the COMPANY, not only an account — and the
+      // name is claimed at that moment, so saying which one was taken is
+      // the useful part of the confirmation.
+      setSuccess(
+        `${data.company_name || company} has been registered. ` +
+          `Once an administrator approves it, you and your team can sign in.`
+      );
+      setTimeout(() => navigate("/"), 3500);
     } catch (err) {
       setError("The connection to the server could not be established.");
     }

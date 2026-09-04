@@ -98,9 +98,33 @@ export default function AllCompanies() {
     }
   };
 
-  // ──── Newly added ────
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure? This CEO will be permanently deleted!"))
+  // ══════════════════════════════════════════════
+  // Closing a company, which is not deleting one
+  // ══════════════════════════════════════════════
+  // The button said "Delete" and the confirmation said "permanently
+  // deleted", and behind it the server ran `db.delete(ceo)` — one
+  // statement, no cascade. The company's employees, jobs, attendance,
+  // leave, payslips and chat history all stayed exactly where they
+  // were, belonging to an owner who no longer existed.
+  //
+  // The server now suspends instead, and a foreign key stops the row
+  // being removed while anything still points at it. So the label says
+  // what actually happens: everybody is locked out and the records are
+  // kept, which is what a company is obliged to do with a year of
+  // payroll.
+  const handleClose = async (id, name) => {
+    if (
+      !window.confirm(
+        `Close ${name || "this company"}?
+
+` +
+          `Nobody in it — the CEO or any employee — will be able to sign ` +
+          `in, and anyone signed in now is signed out immediately.
+
+` +
+          `Its records are kept. You can reopen it from the Inactive tab.`
+      )
+    )
       return;
     try {
       await fetch(`http://127.0.0.1:8000/admin/delete-ceo/${id}`, {
@@ -250,13 +274,15 @@ export default function AllCompanies() {
                             onClick={() => handleDeactivate(company.id)}
                             className="px-3 py-1 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 text-sm font-medium hover:bg-red-500 hover:text-white transition"
                           >
-                            Set Inactive
+                            Suspend
                           </button>
                           <button
-                            onClick={() => handleDelete(company.id)}
+                            onClick={() =>
+                              handleClose(company.id, company.company_name)
+                            }
                             className="px-3 py-1 rounded-lg bg-red-700/30 text-red-400 border border-red-700/40 text-sm font-medium hover:bg-red-700 hover:text-white transition"
                           >
-                            Delete
+                            Close Company
                           </button>
                         </div>
                       )}
@@ -271,10 +297,12 @@ export default function AllCompanies() {
                             Set Active
                           </button>
                           <button
-                            onClick={() => handleDelete(company.id)}
+                            onClick={() =>
+                              handleClose(company.id, company.company_name)
+                            }
                             className="px-3 py-1 rounded-lg bg-red-700/30 text-red-400 border border-red-700/40 text-sm font-medium hover:bg-red-700 hover:text-white transition"
                           >
-                            Delete
+                            Close Company
                           </button>
                         </div>
                       )}
