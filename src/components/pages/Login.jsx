@@ -1,14 +1,12 @@
 import { useState } from "react";
 import bgGlow from "../../images/bg.png";
 import logo from "../../images/logo.png";
-import SplashScreen from "./SplashScreen";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showSplash, setShowSplash] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -58,16 +56,12 @@ export default function Login() {
       if (data.role === "superadmin") navigate("/admin/dashboard");
       else if (data.role === "ceo") navigate("/ceo/dashboard");
       else if (data.role === "employee") navigate("/employee/dashboard");
-    } catch (err) {
+    } catch {
       setError("The connection to the server could not be established.");
     }
 
     setLoading(false);
   };
-
-  if (showSplash) {
-    return <SplashScreen onFinish={() => setShowSplash(false)} />;
-  }
 
   return (
     <div className="relative min-h-screen w-full bg-[#1F1F1F] overflow-hidden">

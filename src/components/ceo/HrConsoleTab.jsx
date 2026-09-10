@@ -16,6 +16,9 @@ import {
   Trash2,
   FileText,
   Download,
+  AlertTriangle,
+  Check,
+  X,
 } from "lucide-react";
 import {
   Panel,
@@ -32,7 +35,7 @@ const API = "http://127.0.0.1:8000";
 const STARTERS = [
   "Who is coming late this month?",
   "What needs my decision?",
-  "Kaun probation par hai?",
+  "Who is on probation?",
   "Salary cost this month",
 ];
 
@@ -265,6 +268,11 @@ export default function HrConsoleTab() {
             text: data.reply,
             sources: data.sources || [],
             attachments: data.attachments || [],
+            // Tasdeeq ke buttons ki zaban isi se aati hai. Bubble ka
+            // matn backend CEO ki zaban mein bhejta hai; buttons us se
+            // alag zaban mein hon to ek hi bubble aadha aadha ho jata
+            // hai.
+            language: data.language || "english",
           },
         ]);
         loadSessions();
@@ -476,7 +484,32 @@ export default function HrConsoleTab() {
               </div>
             )}
 
-            {messages.map((m, i) => (
+            {messages.map((m, i) => {
+              /* ══════════════════════════════════════════════
+                 Tasdeeq — aur yeh baqi jawabon jaisi NAHI dikhti
+                 ══════════════════════════════════════════════
+                 Console ke baqi menu padhne ke bare mein hote hain:
+                 "kaunsa department?" par 1 dabana ek alag JAWAB deta
+                 hai. Yahan 1 dabana kisi ki leave approve KAR DETA
+                 hai.
+
+                 Ek hi shakal dono ke liye rakhna wo aadat banati hai
+                 jis mein CEO bina parhe 1 daba deta hai — aur wo aadat
+                 padhne wale menu par banti hai, kharch likhne wale par
+                 hota hai. Isliye alag rang, alag nishan, aur number
+                 type karne ke bajaye do saaf button.
+
+                 ⚠ Sirf AAKHRI paighaam par. Purani tasdeeq mar chuki
+                 hoti hai (`pending_action_from` sirf aakhri hr reply
+                 dekhta hai), aur us par button dikhana ek aisa wada
+                 hai jo backend poora nahi karega. */
+              const confirm = m.sources?.find?.(
+                (s) => s?.kind === "action"
+              );
+              const live =
+                confirm && m.role === "hr" && i === messages.length - 1;
+
+              return (
               <div
                 key={i}
                 className={`flex flex-col max-w-[85%] ${
@@ -487,11 +520,59 @@ export default function HrConsoleTab() {
                   className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed whitespace-pre-line ${
                     m.role === "ceo"
                       ? "bg-[#05DC7F] text-black font-medium rounded-br-sm"
+                      : confirm
+                      ? "border border-amber-400/45 bg-amber-400/8 text-white/90 rounded-bl-sm"
                       : "border border-white/10 bg-white/3 text-white/85 rounded-bl-sm"
                   }`}
                 >
-                  {m.text}
+                  {confirm && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-amber-300/90 text-[11px] font-medium tracking-wide uppercase">
+                      <AlertTriangle size={12} />
+                      {m.language === "roman_urdu"
+                        ? "Tasdeeq chahiye"
+                        : "Confirmation needed"}
+                    </div>
+                  )}
+                  {/* Confirmation ka matn backend banata hai aur us mein
+                      "1. Haan / 2. Nahi" bhi hota hai. Yahan wo do
+                      lines hata di jati hain, kyunke un ki jagah asli
+                      button hain — dono dikhana CEO ko do raaste deta
+                      hai jin mein se ek type karna parta hai. */}
+                  {live
+                    ? m.text.replace(
+                        /\n*1\.\s*(Haan|Yes)\s*\n*2\.\s*(Nahi|No)\s*$/i,
+                        ""
+                      )
+                    : m.text}
                 </div>
+
+                {live && (
+                  <div className="flex flex-col gap-1.5 mt-2 w-full">
+                    <div className="flex gap-2">
+                      <button
+                        disabled={thinking}
+                        onClick={() => ask("1")}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#05DC7F] text-black text-[12.5px] font-semibold hover:brightness-110 transition disabled:opacity-50"
+                      >
+                        <Check size={13} />{" "}
+                        {m.language === "roman_urdu" ? "Haan, kar do" : "Yes, do it"}
+                      </button>
+                      <button
+                        disabled={thinking}
+                        onClick={() => ask("2")}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/15 text-white/70 text-[12.5px] hover:bg-white/6 transition disabled:opacity-50"
+                      >
+                        <X size={13} />{" "}
+                        {m.language === "roman_urdu" ? "Nahi" : "No"}
+                      </button>
+                    </div>
+                    <p className="text-[10.5px] text-white/35">
+                      {m.language === "roman_urdu"
+                        ? "Yeh tasdeeq 10 minute chalti hai."
+                        : "This confirmation is good for 10 minutes."}
+                    </p>
+                  </div>
+                )}
                 {m.attachments?.length > 0 && (
                   <div className="flex flex-col gap-1.5 mt-2 w-full">
                     {m.attachments.map((a) => (
@@ -532,17 +613,27 @@ export default function HrConsoleTab() {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
 
+            {/* ⚠ Teen point akele kaafi nahi thay.
+                Jawab 3-8 second leta hai, aur us dauran sirf hilte hue
+                point yeh nahi batate ke kaam ho raha hai ya kuch atak
+                gaya. Lafz us shak ko khatam kar deta hai — aur WhatsApp
+                par bhi yehi kiya gaya hai (wahan Meta ka apna "typing…"
+                nishan chalta hai). */}
             {thinking && (
-              <div className="self-start flex items-center gap-1 px-3 py-2.5 rounded-2xl rounded-bl-sm border border-white/10 bg-white/3">
-                {[0, 1, 2].map((i) => (
-                  <span
-                    key={i}
-                    className="w-1.5 h-1.5 rounded-full bg-[#05DC7F] inline-block animate-bounce"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
+              <div className="self-start flex items-center gap-2 px-3.5 py-2.5 rounded-2xl rounded-bl-sm border border-white/10 bg-white/3">
+                <span className="flex items-center gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#05DC7F] inline-block animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
+                  ))}
+                </span>
+                <span className="text-[12px] text-white/45">Thinking…</span>
               </div>
             )}
             <div ref={endRef} />

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import WhatsAppLink from "./WhatsAppLink";
 import {
   FaUser,
   FaEnvelope,
@@ -1677,6 +1678,11 @@ export default function Settings() {
               </button>
             </>
           )}
+        
+
+          {/* WhatsApp — usi jagah, kyunke ye bhi wohi qism ka connection
+              hai jo CEO khud banata hai */}
+          <WhatsAppLink />
         </div>
       )}
 

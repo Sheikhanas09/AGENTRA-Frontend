@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Layout from "../layout/Layout";
+import { logout } from "../../utils/auth";
 import { FaTachometerAlt, FaSignOutAlt } from "react-icons/fa";
 import { HiBuildingOffice2 } from "react-icons/hi2";
 import DashboardHome from "./DashboardHome";
@@ -10,7 +10,6 @@ import AllCompanies from "./AllCompanies";
 
 export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const navigate = useNavigate();
 
   // ──── The real name, from localStorage ────
   const fullName = localStorage.getItem("full_name") || "Super Admin";
@@ -21,12 +20,7 @@ export default function SuperAdminDashboard() {
     .toUpperCase();
 
   // ──── Logout ────
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("full_name");
-    navigate("/");
-  };
+
 
   const tabs = [
     { name: "Dashboard", icon: <FaTachometerAlt size={20} /> },
@@ -72,7 +66,7 @@ export default function SuperAdminDashboard() {
             </div>
             {/* ──── Logout button ──── */}
             <button
-              onClick={handleLogout}
+              onClick={logout}
               className="text-[#05DC7F]/65 hover:text-white transition"
             >
               <FaSignOutAlt size={22} />

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Layout from "../layout/Layout";
+import { logout } from "../../utils/auth";
 import DashboardTab from "./DashboardTab";
 import RecruitmentTab from "./RecruitmentTab";
 import InterviewsTab from "./InterviewsTab";
@@ -31,7 +31,6 @@ import { MdOutlineTouchApp, MdOutlineInbox, MdOutlineSupportAgent } from "react-
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const navigate = useNavigate();
 
   // ──── The real name, from localStorage ────
   const fullName = localStorage.getItem("full_name") || "CEO";
@@ -42,12 +41,7 @@ export default function Dashboard() {
     .toUpperCase();
 
   // ──── Logout ────
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("full_name");
-    navigate("/");
-  };
+
 
   const [jobPosts] = useState([
     {
@@ -147,7 +141,7 @@ export default function Dashboard() {
 
             {/* ──── Logout button ──── */}
             <button
-              onClick={handleLogout}
+              onClick={logout}
               className="text-[#05DC7F]/65 hover:text-white transition"
             >
               <FaSignOutAlt size={22} />

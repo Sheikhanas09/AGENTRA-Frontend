@@ -23,7 +23,7 @@ const GREETING = {
     "Hello! 👋 This is the HR help desk.\n\nAsk me anything about your " +
     "leave, attendance, salary, your own record or the company policy — " +
     "or just tell me what you need and I will take care of it.\n\n" +
-    "Aap Roman Urdu mein bhi likh sakte hain.",
+    "You can write in Roman Urdu too, and I will reply the same way.",
   quickReplies: [
     "My leave balance",
     "This month's attendance",

@@ -59,8 +59,8 @@ export default function Signup() {
         `${data.company_name || company} has been registered. ` +
           `Once an administrator approves it, you and your team can sign in.`
       );
-      setTimeout(() => navigate("/"), 3500);
-    } catch (err) {
+      setTimeout(() => navigate("/login"), 3500);
+    } catch {
       setError("The connection to the server could not be established.");
     }
 
@@ -201,7 +201,7 @@ export default function Signup() {
         <p className="text-center text-white/70 text-sm mt-5">
           Already have an account?{" "}
           <span
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             className="text-[#05DC7F] cursor-pointer hover:underline"
           >
             Login

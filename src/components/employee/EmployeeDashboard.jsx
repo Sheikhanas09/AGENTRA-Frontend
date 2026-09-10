@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Layout from "../layout/Layout";
+import { logout } from "../../utils/auth";
 
 import DashboardTab from "./DashboardTab";
 import EmployeeAttendance from "./EmployeeAttendance";
@@ -32,10 +33,7 @@ export default function EmployeeDashboard() {
     .map((w) => w[0]?.toUpperCase())
     .join("");
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
+
 
   const tabs = [
     { name: "Dashboard", icon: <FaTachometerAlt size={20} /> },
@@ -89,7 +87,7 @@ export default function EmployeeDashboard() {
               </div>
 
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 title="Logout"
                 className="text-[#05DC7F]/65 hover:text-white transition"
               >

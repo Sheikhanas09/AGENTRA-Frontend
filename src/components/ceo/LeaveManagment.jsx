@@ -726,8 +726,7 @@ export default function LeaveManagment() {
           <p className="text-gray-500 text-xs mb-4">
             Set the entitlement to <b className="text-gray-400">0</b> and the
             type stays visible but cannot be applied for. To hide it
-            entirely, switch it <b className="text-gray-400">Off</b>
-            dein.
+            entirely, switch it <b className="text-gray-400">Off</b>.
           </p>
 
           {/* ── Policy Extraction Agent ── */}

@@ -80,7 +80,7 @@ I am writing to express my interest in the ${job.title} position at ${job.compan
             {jobs.length} open positions
           </span>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             className="text-[#05DC7F] border border-[#05DC7F]/40 px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl text-sm font-medium hover:bg-[#05DC7F] hover:text-black transition"
           >
             Login

@@ -1023,6 +1023,8 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
     tax_percentage: 0,
     tax_threshold: 0,
     provident_fund_percent: 0,
+    payday_type: "unset",
+    payday_day: 1,
     ...(policy || {}),
   }));
   const [saving, setSaving] = useState(false);
@@ -1072,6 +1074,11 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
           tax_percentage: Number(form.tax_percentage) || 0,
           tax_threshold: Number(form.tax_threshold) || 0,
           provident_fund_percent: Number(form.provident_fund_percent) || 0,
+          payday_type: form.payday_type || "unset",
+          // Backend "day_of_month" ke ilawa isay nazarandaz karta hai,
+          // magar bhejna phir bhi theek hai: agar CEO type badal kar
+          // wapas laaye to jo number usne likha tha wo bacha rehta hai.
+          payday_day: Number(form.payday_day) || 1,
         }),
       });
       const data = await res.json();
@@ -1145,8 +1152,65 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
           </div>
         )}
 
-        {/* Overtime */}
+        {/* ──── Payday ──── */}
+        {/* Yeh sab se upar hai kyunke employee ka pehla sawal yehi hota
+            hai, aur pehle system ke paas is ka koi jawab nahi tha. */}
         <div>
+          <h3 className="text-white text-sm font-semibold mb-1">
+            When salary is paid
+          </h3>
+          <p className="text-gray-500 text-xs mb-3">
+            {form.payday_type === "unset"
+              ? "Not recorded yet. Payroll runs from the 1st, and the help desk tells employees plainly that no pay date is on record."
+              : policy?.payday_text
+                ? `Payroll runs on this day for the month just ended — ${policy.payday_text}.`
+                : "Saved."}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-gray-400 text-sm flex items-center gap-2">
+                How it is stated
+                <PolicyBadge item={fromPolicy?.fields?.payday_type} />
+              </span>
+              <Select
+                value={form.payday_type || "unset"}
+                onChange={(v) => setForm({ ...form, payday_type: v })}
+                options={[
+                  { value: "unset", label: "Not recorded" },
+                  { value: "day_of_month", label: "A fixed date" },
+                  { value: "last_day", label: "Last day of the month" },
+                  { value: "last_working_day", label: "Last working day" },
+                ]}
+              />
+            </div>
+
+            {form.payday_type === "day_of_month" && (
+              <div className="flex flex-col gap-1">
+                <span className="text-gray-400 text-sm flex items-center gap-2">
+                  Which date
+                  <PolicyBadge item={fromPolicy?.fields?.payday_day} />
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={form.payday_day ?? 1}
+                  onChange={(e) =>
+                    setForm({ ...form, payday_day: e.target.value })
+                  }
+                  className="bg-white/[0.03] border border-white/[0.08] text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-[#05DC7F]/50 transition tabular-nums"
+                />
+                <span className="text-gray-600 text-[11px]">
+                  A month shorter than this falls back to its last day.
+                </span>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* Overtime */}
+        <div className="pt-5 border-t border-white/[0.07]">
           <h3 className="text-white text-sm font-semibold mb-3">Overtime</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {num(
