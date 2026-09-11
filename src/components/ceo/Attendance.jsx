@@ -904,7 +904,7 @@ export default function Attendance() {
       {photo && (
         <div onClick={closePhoto} className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4"
         >
-          <div onClick={(e) => e.stopPropagation()} className="bg-[#111] p-4 rounded-2xl border border-[#05DC7F]/30 flex flex-col gap-3 max-w-md w-full"
+          <div onClick={(e) => e.stopPropagation()} className="bg-[#111] p-4 rounded-2xl border border-[#05DC7F]/30 flex flex-col gap-3 max-w-md w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center">
               <p className="text-white font-semibold text-sm">

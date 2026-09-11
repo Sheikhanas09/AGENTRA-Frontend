@@ -47,8 +47,8 @@ function InterviewCard({ item, onView }) {
 function DetailsModal({ item, onClose }) {
   if (!item) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 pt-10 overflow-y-auto">
-      <div className="relative w-[90%] max-w-lg p-6 rounded-2xl bg-black/90 border border-[#05DC7F]/40 shadow-[0_0_25px_rgba(5,220,127,0.4)] mb-10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 pt-10 overflow-y-auto p-4">
+      <div className="relative w-[90%] max-w-lg p-6 rounded-2xl bg-black/90 border border-[#05DC7F]/40 shadow-[0_0_25px_rgba(5,220,127,0.4)] mb-10 max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition"

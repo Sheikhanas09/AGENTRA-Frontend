@@ -297,16 +297,16 @@ export default function WhatsAppLink() {
                 className="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:opacity-90 transition"
               >
                 <FaWhatsapp size={15} />
-                WhatsApp kholein
+                Open WhatsApp
               </a>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-xs mb-4">
             <span className="text-gray-400">
-              Baqi waqt:{" "}
+              Time left:{" "}
               <b className="text-white tabular-nums">
-                {secondsLeft > 0 ? mmss : "khatam"}
+                {secondsLeft > 0 ? mmss : "expired"}
               </b>
             </span>
             <span className="text-gray-500">
@@ -324,7 +324,7 @@ export default function WhatsAppLink() {
           <div className="mt-4 text-gray-500 text-xs">
             {secondsLeft > 0
               ? "This page updates itself the moment your message arrives…"
-              : "Code khatam ho gaya."}
+              : "The code has expired."}
             {secondsLeft <= 0 && (
               <button
                 onClick={() => {
@@ -333,7 +333,7 @@ export default function WhatsAppLink() {
                 }}
                 className="ml-2 text-[#05DC7F] hover:underline"
               >
-                naya code banayein
+                generate a new code
               </button>
             )}
           </div>
@@ -361,7 +361,7 @@ export default function WhatsAppLink() {
               disabled={busy}
               className="px-5 py-2 rounded-xl bg-[#05DC7F] text-black text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
             >
-              {busy ? "…" : "Code bhejein"}
+              {busy ? "…" : "Send code"}
             </button>
             <button
               type="button"

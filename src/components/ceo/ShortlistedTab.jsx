@@ -424,8 +424,8 @@ export default function ShortlistedTab() {
 
       {/* ──── CV Modal ──── */}
       {showCVModal && cvCandidate && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-[#1F1F1F] w-full max-w-2xl rounded-xl border border-[#05DC7F]/20 shadow-[0_0_30px_rgba(5,220,127,0.15)] flex flex-col max-h-[90vh] sm:max-h-[85vh]">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4 p-4">
+          <div className="bg-[#1F1F1F] w-full max-w-2xl rounded-xl border border-[#05DC7F]/20 shadow-[0_0_30px_rgba(5,220,127,0.15)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-start px-5 sm:px-6 py-4 border-b border-gray-700">
               <div>
                 <h4 className="text-white font-bold text-base sm:text-lg">
@@ -461,7 +461,7 @@ export default function ShortlistedTab() {
 
       {/* ──── Schedule Modal ──── */}
       {showModal && selectedCandidate && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4 p-4">
           <div className="bg-[#1F1F1F] w-full max-w-lg rounded-xl p-5 sm:p-6 relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowModal(false)}

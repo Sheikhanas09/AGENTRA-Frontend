@@ -1036,8 +1036,8 @@ export default function EmployeeAttendance() {
         )}
 
         {showEnrollCamera && (
-          <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
-            <div className="bg-[#111] p-6 rounded-xl flex flex-col gap-4 items-center">
+          <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#111] p-6 rounded-xl flex flex-col gap-4 items-center max-h-[90vh] overflow-y-auto">
               <p className="text-white font-semibold">Look straight at the camera...</p>
               <video
                 ref={videoRef}
@@ -1278,8 +1278,8 @@ export default function EmployeeAttendance() {
 
       {/* ── Camera Popup ── */}
       {showCamera && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-[#111] p-6 rounded-xl flex flex-col gap-4">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#111] p-6 rounded-xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <p className="text-white text-center font-semibold">
               Attendance Photo —{" "}
               {cameraAction === "checkin" ? "Check-In" : "Check-Out"}

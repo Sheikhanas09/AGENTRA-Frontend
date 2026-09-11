@@ -62,3 +62,22 @@ select optgroup {
   background-color: #0b100e;
   color: #e5e7eb;
 }
+
+/* ⚠ Sajawati glow (Login/Signup/Home) 600-800px ke hain — chhoti screen
+   se chaure. Un ki wajah se safha daayen-baayen khisakta tha. Yeh ek
+   lakeer har safhe par lagti hai, aur agla safha bhi mehfooz rehta hai. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Footer ke anchor link (#features, #how, #security) narmi se chalein */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

@@ -633,7 +633,7 @@ function RunDetail({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl my-8 rounded-2xl border border-white/10 bg-[#0b0f0d]"
+        className="w-full max-w-4xl my-8 rounded-2xl border border-white/10 bg-[#0b0f0d] max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Head */}
@@ -681,7 +681,7 @@ function RunDetail({
         </div>
 
         {/* Totals */}
-        <div className="grid grid-cols-3 gap-3 p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5">
           {[
             ["Gross", run.total_gross],
             ["Deductions", run.total_deductions],

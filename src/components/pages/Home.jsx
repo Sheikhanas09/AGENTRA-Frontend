@@ -349,7 +349,10 @@ export default function Home() {
       </section>
 
       {/* ──── Tenancy — yeh kehne layak baat hai ──── */}
-      <section className="relative z-10 max-w-[1180px] mx-auto px-5 sm:px-8 pb-14 sm:pb-20">
+      <section
+        id="security"
+        className="relative z-10 max-w-[1180px] mx-auto px-5 sm:px-8 pb-14 sm:pb-20"
+      >
         <div className="rounded-[32px] border border-white/12 bg-white/[0.03] backdrop-blur-[18px] p-7 sm:p-10 flex flex-col md:flex-row md:items-center gap-6">
           <div className="w-12 h-12 rounded-2xl bg-[#05DC7F]/12 border border-[#05DC7F]/25 flex items-center justify-center shrink-0">
             <ShieldCheck size={22} className="text-[#05DC7F]" />
@@ -387,23 +390,127 @@ export default function Home() {
       </section>
 
       {/* ──── Footer ──── */}
-      <footer className="relative z-10 border-t border-white/10">
-        <div className="max-w-[1180px] mx-auto px-5 sm:px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="Agentra" className="w-20 opacity-70" />
-          <div className="flex items-center gap-6 text-[13px] text-white/45">
-            <button
-              onClick={() => navigate("/jobs")}
-              className="hover:text-white/80 transition"
-            >
-              Careers
-            </button>
-            <button
-              onClick={() => navigate("/login")}
-              className="hover:text-white/80 transition"
-            >
-              Login
-            </button>
-            <span>© {new Date().getFullYear()} Agentra</span>
+      {/* Pehle yahan sirf ek qatar thi: logo, do link, aur copyright.
+          Footer wo jagah hai jahan wo shakhs pohanchta hai jo poora
+          safha parh chuka aur abhi tak faisla nahi kar saka — us ke
+          saamne "Login" rakh dena us ka sawal nahi hai.
+
+          ⚠ Har link yahan ASLI hai: teen anchors un sections ke jo isi
+          safhe par hain (#features, #how, #security), aur teen raaste
+          jo `App.jsx` mein waqai mojood hain (/signup, /login, /jobs).
+          Ek toota hua footer link poore safhe ka aitmaad le jata hai. */}
+      <footer className="relative z-10 border-t border-white/10 mt-6">
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-8 pt-12 pb-8">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+            {/* ─ Kaun ─ */}
+            <div>
+              <img src={logo} alt="Agentra" className="w-24 opacity-80" />
+              <p className="mt-4 text-white/45 text-[13.5px] leading-relaxed max-w-[300px]">
+                One HR system for the whole company — hiring, attendance,
+                leave and payroll — with an assistant that can actually
+                do the work, not just look it up.
+              </p>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#05DC7F]/25 bg-[#05DC7F]/[0.06] px-3 py-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#05DC7F]" />
+                <span className="text-[#05DC7F]/85 text-[11.5px]">
+                  Your data never leaves your company
+                </span>
+              </div>
+            </div>
+
+            {/* ─ Safhe ke hissay ─ */}
+            <div>
+              <h4 className="text-white/85 text-[12px] font-semibold tracking-[0.14em] uppercase">
+                Product
+              </h4>
+              <ul className="mt-4 space-y-2.5 text-[13.5px]">
+                <li>
+                  <a href="#features" className="text-white/45 hover:text-white/85 transition">
+                    What is inside
+                  </a>
+                </li>
+                <li>
+                  <a href="#how" className="text-white/45 hover:text-white/85 transition">
+                    How to start
+                  </a>
+                </li>
+                <li>
+                  <a href="#security" className="text-white/45 hover:text-white/85 transition">
+                    Your data
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* ─ Raaste ─ */}
+            <div>
+              <h4 className="text-white/85 text-[12px] font-semibold tracking-[0.14em] uppercase">
+                Get started
+              </h4>
+              <ul className="mt-4 space-y-2.5 text-[13.5px]">
+                <li>
+                  <button
+                    onClick={() => navigate("/signup")}
+                    className="text-white/45 hover:text-white/85 transition"
+                  >
+                    Create a company
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="text-white/45 hover:text-white/85 transition"
+                  >
+                    Log in
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => navigate("/jobs")}
+                    className="text-white/45 hover:text-white/85 transition"
+                  >
+                    Open positions
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* ─ Do channel ─ asli, `whatsapp.py` aur console dono chaltay hain ─ */}
+            <div>
+              <h4 className="text-white/85 text-[12px] font-semibold tracking-[0.14em] uppercase">
+                Reach your HR
+              </h4>
+              <ul className="mt-4 space-y-3 text-[13.5px] text-white/45">
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-[#05DC7F]/70 flex-none" />
+                  <span>
+                    Web console
+                    <span className="block text-white/30 text-[12px]">
+                      Inside your dashboard
+                    </span>
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-[#05DC7F]/70 flex-none" />
+                  <span>
+                    WhatsApp
+                    <span className="block text-white/30 text-[12px]">
+                      Link your number once
+                    </span>
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ─ Neechay ki patti ─ */}
+          <div className="mt-12 pt-6 border-t border-white/[0.07] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span className="text-white/30 text-[12.5px]">
+              &copy; {new Date().getFullYear()} Agentra. All rights reserved.
+            </span>
+            <span className="text-white/25 text-[12.5px]">
+              Built for one company at a time.
+            </span>
           </div>
         </div>
       </footer>

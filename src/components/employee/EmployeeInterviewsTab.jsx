@@ -347,7 +347,7 @@ export default function EmployeeInterviewsTab() {
 
       {/* ──── Feedback Modal ──── */}
       {showFeedbackModal && selectedInterview && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4 p-4">
           <div className="bg-[#1F1F1F] w-full max-w-lg rounded-xl border border-[#05DC7F]/20 p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
             {feedbackSuccess ? (
               <div className="flex flex-col items-center gap-4 py-6 text-center">

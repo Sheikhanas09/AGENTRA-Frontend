@@ -197,8 +197,8 @@ export default function Hiring() {
     <div className="flex flex-col gap-6">
       {/* ──── Job Select Popup ──── */}
       {showPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md bg-black/90 border border-[#05DC7F]/40 rounded-2xl p-6 shadow-[0_0_25px_rgba(5,220,127,0.4)] relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 p-4">
+          <div className="w-full max-w-md bg-black/90 border border-[#05DC7F]/40 rounded-2xl p-6 shadow-[0_0_25px_rgba(5,220,127,0.4)] relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowPopup(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white"
@@ -511,8 +511,8 @@ export default function Hiring() {
 
       {/* ──── Details Modal ──── */}
       {showDetails && selectedCandidate && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 pt-10 overflow-y-auto">
-          <div className="w-full max-w-lg bg-[#1F1F1F] rounded-xl border border-[#05DC7F]/20 shadow-[0_0_30px_rgba(5,220,127,0.15)] mb-10">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm px-4 pt-10 overflow-y-auto p-4">
+          <div className="w-full max-w-lg bg-[#1F1F1F] rounded-xl border border-[#05DC7F]/20 shadow-[0_0_30px_rgba(5,220,127,0.15)] mb-10 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start px-5 py-4 border-b border-gray-700">
               <div>
                 <h4 className="text-white font-bold text-base">

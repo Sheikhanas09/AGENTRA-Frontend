@@ -93,7 +93,7 @@ function RateRing({ value }) {
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className="text-[52px] leading-none font-bold text-white"
+          className="text-[38px] sm:text-[52px] leading-none font-bold text-white"
           style={{ textShadow: `0 0 24px ${stroke}55` }}
         >
           {value}

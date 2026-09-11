@@ -1793,7 +1793,7 @@ export default function Settings() {
                 rel="noreferrer"
                 className="flex items-center gap-2 text-blue-400 text-sm hover:text-blue-300 transition"
               >
-                🗺️ Google Maps pe dekho
+                🗺️ View on Google Maps
               </a>
             </div>
           )}

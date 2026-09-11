@@ -65,13 +65,13 @@ export default function Recruitment() {
 
       {/* ===== Job Modal ===== */}
       {selectedJob && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-2 sm:px-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-2 sm:px-4 p-4">
           <div
             className="absolute inset-0 bg-black/70 backdrop-blur-xs"
             onClick={() => setSelectedJob(null)}
           />
 
-          <div className="relative bg-[#0b0b0b] w-full max-w-md sm:max-w-2xl rounded-2xl border border-[#05DC7F]/30 shadow-[0_0_25px_rgba(5,220,127,0.25)] flex flex-col max-h-[90vh]">
+          <div className="relative bg-[#0b0b0b] w-full max-w-md sm:max-w-2xl rounded-2xl border border-[#05DC7F]/30 shadow-[0_0_25px_rgba(5,220,127,0.25)] flex flex-col max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-700">
               <div>

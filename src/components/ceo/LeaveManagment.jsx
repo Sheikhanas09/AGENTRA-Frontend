@@ -1309,7 +1309,7 @@ export default function LeaveManagment() {
               {prettyDate(selected.created_at)}
             </p>
 
-            <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
               <div className="p-3 rounded-lg bg-black/40 border border-[#05DC7F]/15">
                 <p className="text-gray-500 text-xs mb-1">Leave Type</p>
                 <span className={`px-2 py-0.5 rounded-full text-xs ${leaveTypeColor[selected.leave_type] || ""}`}

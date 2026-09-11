@@ -241,12 +241,12 @@ I am writing to express my interest in the ${job.title} position at ${job.compan
 
       {/* ──── Modal ──── */}
       {selectedJob && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setSelectedJob(null)}
           />
-          <div className="relative bg-[#0d0d0d] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border border-[#05DC7F]/20 shadow-[0_0_40px_rgba(5,220,127,0.15)] flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+          <div className="relative bg-[#0d0d0d] w-full sm:max-w-2xl rounded-t-3xl sm:rounded-2xl border border-[#05DC7F]/20 shadow-[0_0_40px_rgba(5,220,127,0.15)] flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-start px-5 sm:px-6 py-4 border-b border-white/10">
               <div className="flex-1 min-w-0 mr-3">
