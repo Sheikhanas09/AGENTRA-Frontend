@@ -1634,13 +1634,24 @@ export default function Settings() {
                 </div>
               )}
 
+              {/* A healthy connection has nothing to "reconnect" — the
+                  word made a working account look broken. It only says
+                  Reconnect when a permission is actually missing. */}
               <div className="flex gap-3">
                 <button
                   onClick={connectGoogle}
                   disabled={integrationBusy}
-                  className="px-4 py-2 rounded-xl bg-[#05DC7F] text-black font-semibold text-sm disabled:opacity-50"
+                  className={
+                    integration.can_send_email
+                      ? "px-4 py-2 rounded-xl bg-white/5 text-gray-300 border border-white/15 font-semibold text-sm disabled:opacity-50"
+                      : "px-4 py-2 rounded-xl bg-[#05DC7F] text-black font-semibold text-sm disabled:opacity-50"
+                  }
                 >
-                  {integrationBusy ? "Opening Google…" : "Reconnect"}
+                  {integrationBusy
+                    ? "Opening Google…"
+                    : integration.can_send_email
+                      ? "Change account"
+                      : "Reconnect"}
                 </button>
                 <button
                   onClick={disconnectGoogle}
@@ -1653,11 +1664,32 @@ export default function Settings() {
             </>
           ) : (
             <>
-              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-5 text-amber-300 text-sm">
-                No Google account is connected. Fetching applications,
-                interview invitations, offer letters and payslip emails will
-                not work until one is.
-              </div>
+              {/* "Not connected" has two very different histories: never
+                  connected, or connected and then dropped by Google (a
+                  revoked token). The second used to render as the first,
+                  and the CEO read it as "the app forgot my account". */}
+              {integration.last_error ? (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/40 mb-5 text-sm">
+                  <div className="text-red-300 font-semibold mb-1">
+                    {integration.account_email
+                      ? `${integration.account_email} was disconnected by Google`
+                      : "The Google connection was dropped"}
+                  </div>
+                  <div className="text-red-300/90 leading-relaxed">
+                    {integration.last_error}
+                  </div>
+                  <div className="text-amber-300 mt-2">
+                    Applications, interview invitations, offer letters and
+                    payslip emails will not work until you reconnect.
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 mb-5 text-amber-300 text-sm">
+                  No Google account is connected. Fetching applications,
+                  interview invitations, offer letters and payslip emails will
+                  not work until one is.
+                </div>
+              )}
 
               {integration.secrets_configured === false && (
                 <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/40 text-red-300 text-sm">
@@ -1674,7 +1706,11 @@ export default function Settings() {
                 }
                 className="px-5 py-2.5 rounded-xl bg-[#05DC7F] text-black font-semibold text-sm disabled:opacity-50"
               >
-                {integrationBusy ? "Opening Google…" : "Connect Google"}
+                {integrationBusy
+                  ? "Opening Google…"
+                  : integration.last_error
+                    ? "Reconnect Google"
+                    : "Connect Google"}
               </button>
             </>
           )}

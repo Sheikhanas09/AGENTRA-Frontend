@@ -9,6 +9,7 @@ import Login from "./components/pages/Login";
 import Signup from "./components/pages/Signup";
 import SuperAdminDashboard from "./components/superAdmin/SuperAdminDashboard";
 import EmployeeDashboard from "./components/employee/EmployeeDashboard";
+import Onboarding from "./components/employee/Onboarding";
 import CeoDashboard from "./components/ceo/Dashboard";
 import JobPortal from "./components/pages/JobPortal";
 
@@ -59,6 +60,21 @@ function App() {
           }
         />
         {/* Employee Routes */}
+        {/* ⚠ Onboarding dashboard se PEHLE aata hai, aur us ka apna
+            route hai — dashboard ke andar ek overlay nahi.
+
+            Wajah: overlay ke peeche poora dashboard mount ho jata, us ki
+            saari API calls chal partin, aur har ek 428 le kar wapas
+            aati. Safha error se bhara hua dikhta us shakhs ko jis ne
+            abhi tak kuch ghalat kiya hi nahi. */}
+        <Route
+          path="/employee/onboarding"
+          element={
+            <ProtectedRoute allowedRole="employee">
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/employee/dashboard"
           element={

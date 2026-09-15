@@ -12,6 +12,7 @@ import CreateUserTab from "./CreateUserTab";
 import Hiring from "./Hiring";
 import Settings from "./Settings";
 import PayrollTab from "./PayrollTab";
+import PaymentDetailsTab from "./PaymentDetailsTab";
 import HiredEmployeesTab from "./HiredEmployeesTab";
 import RequestsTab from "./RequestsTab";
 import HrConsoleTab from "./HrConsoleTab";
@@ -80,6 +81,7 @@ export default function Dashboard() {
     { name: "Attendance", icon: <FaUserAlt size={20} /> },
     { name: "Leave Managment", icon: <FaFileAlt size={20} /> },
     { name: "Payroll", icon: <FaDollarSign size={20} /> },
+    { name: "Payment Details", icon: <FaDollarSign size={20} /> },
     { name: "Requests", icon: <MdOutlineInbox size={20} /> },
     { name: "HR Console", icon: <MdOutlineSupportAgent size={20} /> },
     { name: "Settings", icon: <LuSettings2 size={20} /> },
@@ -95,6 +97,7 @@ export default function Dashboard() {
     Attendance: <Attendance />,
     "Leave Managment": <LeaveManagment />,
     Payroll: <PayrollTab />,
+    "Payment Details": <PaymentDetailsTab />,
     Requests: <RequestsTab />,
     "HR Console": <HrConsoleTab />,
     Settings: (

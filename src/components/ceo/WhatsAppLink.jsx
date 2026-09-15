@@ -219,13 +219,13 @@ export default function WhatsAppLink() {
         <h2 className="text-white text-xl font-bold">WhatsApp</h2>
       </div>
       <p className="text-gray-400 text-sm mb-6 leading-relaxed">
-        Link your WhatsApp and ask the same questions from there that you
-        ask here in the console — headcount, attendance, leave, payroll.
+        Link your WhatsApp and ask the same questions from there that you ask
+        here in the console — headcount, attendance, leave, payroll.
         <br />
         <br />
         Replies only ever go to the number you link yourself. Your role is
-        checked again on every message, so the link stops working on its own
-        if you are no longer the CEO.
+        checked again on every message, so the link stops working on its own if
+        you are no longer the CEO.
       </p>
 
       {error && (
@@ -243,7 +243,7 @@ export default function WhatsAppLink() {
             <span className="text-[#05DC7F] text-lg leading-none">●</span>
             <div>
               <div className="text-white font-semibold">
-                Jura hua — •••• {status.phone_tail}
+                Connected — •••• {status.phone_tail}
               </div>
               <div className="text-gray-400 text-xs mt-1">
                 {status.verified_at
@@ -317,8 +317,8 @@ export default function WhatsAppLink() {
           {/* ⚠ Yeh CEO ko pehle se batana zaroori hai, warna refresh ke
               baad wo samjhega kuch toot gaya. */}
           <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-gray-400 text-xs leading-relaxed">
-            This code is shown once and is never stored anywhere.
-            Refresh the page and it is gone — request a new one.
+            This code is shown once and is never stored anywhere. Refresh the
+            page and it is gone — request a new one.
           </div>
 
           <div className="mt-4 text-gray-500 text-xs">
@@ -341,9 +341,7 @@ export default function WhatsAppLink() {
       ) : /* ══════════ STATE 1 — juda hua nahi ══════════ */
       showForm ? (
         <form onSubmit={connect} className="flex flex-col gap-3 max-w-md">
-          <label className="text-gray-400 text-sm">
-            Your WhatsApp number
-          </label>
+          <label className="text-gray-400 text-sm">Your WhatsApp number</label>
           <input
             type="tel"
             value={phone}
@@ -381,9 +379,9 @@ export default function WhatsAppLink() {
             // Code ban chuka tha magar ye safha refresh ho gaya — code
             // ab kahin nahi hai, aur ye batana zaroori hai.
             <div className="mb-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-gray-400 text-xs">
-              A code has already been sent but is no longer on this page.
-              If you have already sent it this will update itself —
-              otherwise request a new one.
+              A code has already been sent but is no longer on this page. If you
+              have already sent it this will update itself — otherwise request a
+              new one.
             </div>
           )}
           <button

@@ -55,7 +55,17 @@ export default function Login() {
 
       if (data.role === "superadmin") navigate("/admin/dashboard");
       else if (data.role === "ceo") navigate("/ceo/dashboard");
-      else if (data.role === "employee") navigate("/employee/dashboard");
+      else if (data.role === "employee") {
+        // ⚠ Yeh sirf SAFAR bachata hai. Rokna backend karta hai
+        // (`get_tenant` -> 428), kyunke localStorage ki qeemat wohi
+        // shakhs badal sakta hai jise rokna maqsood hai.
+        localStorage.setItem(
+          "profile_complete", data.profile_complete ? "1" : "0");
+        navigate(
+          data.profile_complete
+            ? "/employee/dashboard"
+            : "/employee/onboarding");
+      }
     } catch {
       setError("The connection to the server could not be established.");
     }

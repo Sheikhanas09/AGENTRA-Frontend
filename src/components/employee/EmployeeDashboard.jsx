@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "../layout/Layout";
 import { logout } from "../../utils/auth";
 
@@ -9,6 +10,7 @@ import EmployeeAttendance from "./EmployeeAttendance";
 import EmployeeInterviewsTab from "./EmployeeInterviewsTab";
 import EmployeeLeave from "./EmployeeLeave";
 import EmployeePayroll from "./EmployeePayroll";
+import MyProfile from "./MyProfile";
 import HRChatbot from "./HrChatBot";
 
 import {
@@ -18,10 +20,47 @@ import {
   FaDollarSign,
   FaSignOutAlt,
   FaCalendarCheck,
+  FaIdBadge,
 } from "react-icons/fa";
 
+const API = "http://127.0.0.1:8000";
+
 export default function EmployeeDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Dashboard");
+
+  // ⚠ Safha khulte hi ek sawal: onboarding hui ya nahi.
+  //
+  // `localStorage` par bharosa nahi kiya ja sakta — wo purana ho
+  // sakta hai (CEO ne kisi aur device se account daal diya), aur wo
+  // shakhs khud bhi badal sakta hai. Jawab server se aata hai.
+  //
+  // Yeh rokawat NAHI hai (rokna backend 428 se karta hai) — yeh us
+  // rokawat ka saaf paighaam hai, taake safha 428 ke erroron se
+  // bhara hua na dikhe.
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/employee/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive) return;
+        localStorage.setItem(
+          "profile_complete", data.onboarding_complete ? "1" : "0");
+        if (!data.onboarding_complete) navigate("/employee/onboarding");
+      } catch {
+        /* server band hai — baqi safha apna error khud dikhata hai */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [navigate]);
 
   // ──── Comes from localStorage at login — used to be hardcoded ────
   const fullName = localStorage.getItem("full_name") || "Employee";
@@ -41,6 +80,7 @@ export default function EmployeeDashboard() {
     { name: "Interviews", icon: <FaCalendarCheck size={20} /> },
     { name: "Leave", icon: <FaFileAlt size={20} /> },
     { name: "Payroll", icon: <FaDollarSign size={20} /> },
+    { name: "My Profile", icon: <FaIdBadge size={20} /> },
   ];
 
   const tabComponents = {
@@ -49,6 +89,7 @@ export default function EmployeeDashboard() {
     Interviews: <EmployeeInterviewsTab />,
     Leave: <EmployeeLeave />,
     Payroll: <EmployeePayroll />,
+    "My Profile": <MyProfile />,
   };
 
   return (
