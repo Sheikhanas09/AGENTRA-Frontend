@@ -132,7 +132,10 @@ export default function PayrollTab() {
         fetch(`${API}/payroll/branding`, { headers: authHeaders }),
       ]);
       const [r, s, p, b] = await Promise.all([
-        rRes.json(), sRes.json(), pRes.json(), bRes.json(),
+        rRes.json(),
+        sRes.json(),
+        pRes.json(),
+        bRes.json(),
       ]);
       if (rRes.ok) setRuns(r.runs || []);
       if (sRes.ok) {
@@ -336,8 +339,8 @@ export default function PayrollTab() {
         <div className="p-3 rounded-xl bg-amber-400/12 border border-amber-400/30 text-amber-300 text-sm flex items-start gap-2">
           <AlertTriangle size={15} className="mt-0.5 shrink-0" />
           <span>
-            <b>{missing}</b> employee(s) have no salary structure — their
-            slips will not be produced.{" "}
+            <b>{missing}</b> employee(s) have no salary structure — their slips
+            will not be produced.{" "}
             <button
               onClick={() => setTab("salaries")}
               className="underline hover:text-amber-200"
@@ -410,7 +413,7 @@ export default function PayrollTab() {
       {tab === "runs" && (
         <>
           <Panel
-            title="Payroll chalayein"
+            title=" Run Payroll"
             icon={Play}
             subtitle="Pick a month — the salary is built from attendance and leave"
           >
@@ -507,7 +510,9 @@ export default function PayrollTab() {
                           {compact(r.total_payroll_cost)}
                         </td>
                         <td className="py-3 px-4 text-xs text-gray-500">
-                          {r.run_at ? r.run_at.slice(0, 16).replace("T", " ") : "—"}
+                          {r.run_at
+                            ? r.run_at.slice(0, 16).replace("T", " ")
+                            : "—"}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex justify-end gap-1.5">
@@ -621,7 +626,13 @@ export default function PayrollTab() {
    Run detail
    ══════════════════════════════════════════ */
 function RunDetail({
-  detail, busy, onClose, onApprove, onDownload, onResend, onRegenerate,
+  detail,
+  busy,
+  onClose,
+  onApprove,
+  onDownload,
+  onResend,
+  onRegenerate,
 }) {
   const run = detail.run || {};
   const slips = detail.payslips || [];
@@ -712,7 +723,10 @@ function RunDetail({
         {/* Slips */}
         <div className="px-5 pb-5">
           {slips.length === 0 ? (
-            <EmptyState icon={FileText} title="No slip was produced in this run" />
+            <EmptyState
+              icon={FileText}
+              title="No slip was produced in this run"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
@@ -735,14 +749,19 @@ function RunDetail({
                       <td className="py-3 px-4">
                         <p className="text-white text-sm">{s.employee_name}</p>
                         {s.department && (
-                          <p className="text-gray-500 text-xs">{s.department}</p>
+                          <p className="text-gray-500 text-xs">
+                            {s.department}
+                          </p>
                         )}
                         {s.warnings?.length > 0 && (
                           <p
                             className="text-amber-400 text-[10.5px] mt-1 flex items-start gap-1"
                             title={s.warnings.join("\n")}
                           >
-                            <AlertTriangle size={10} className="mt-0.5 shrink-0" />
+                            <AlertTriangle
+                              size={10}
+                              className="mt-0.5 shrink-0"
+                            />
                             {s.warnings.length} warning
                           </p>
                         )}
@@ -805,7 +824,12 @@ function RunDetail({
    Salary structures
    ══════════════════════════════════════════ */
 function SalarySetup({
-  structures, loading, jsonHeaders, onSaved, setError, setNotice,
+  structures,
+  loading,
+  jsonHeaders,
+  onSaved,
+  setError,
+  setNotice,
 }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
@@ -954,7 +978,9 @@ function SalarySetup({
                   <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
                     <p className="text-gray-400 text-sm">
                       Gross fixed:{" "}
-                      <b className="text-white tabular-nums">{money(preview)}</b>
+                      <b className="text-white tabular-nums">
+                        {money(preview)}
+                      </b>
                       <span className="text-gray-600 text-xs">
                         {" "}
                         — overtime and deductions on top of this
@@ -1129,7 +1155,8 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <FileCheck2 size={15} className="text-[#05DC7F]" />
               <span className="text-white text-sm font-semibold">
-                {fromPolicy.found_count} rule(s) applied from the policy document
+                {fromPolicy.found_count} rule(s) applied from the policy
+                document
               </span>
               {fromPolicy.policy_label && (
                 <span className="text-gray-500 text-[11px]">
@@ -1205,7 +1232,6 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
                 </span>
               </div>
             )}
-
           </div>
         </div>
 
@@ -1224,7 +1250,9 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
 
         {/* Late */}
         <div className="pt-5 border-t border-white/[0.07]">
-          <h3 className="text-white text-sm font-semibold mb-3">Late arrival</h3>
+          <h3 className="text-white text-sm font-semibold mb-3">
+            Late arrival
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <span className="text-gray-400 text-sm flex items-center gap-2">
@@ -1233,9 +1261,7 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
               </span>
               <Select
                 value={form.late_deduction_policy}
-                onChange={(v) =>
-                  setForm({ ...form, late_deduction_policy: v })
-                }
+                onChange={(v) => setForm({ ...form, late_deduction_policy: v })}
                 options={[
                   {
                     value: "pro_rata",
@@ -1267,29 +1293,26 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
 
           {form.late_deduction_policy === "pro_rata" && (
             <p className="text-gray-500 text-xs mt-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-              Example: base <b className="text-gray-300">100,000</b>, month
-              with 22 working days × 8 hours ={" "}
-              <b className="text-gray-300">176</b> hours &rarr; hourly{" "}
-              <b className="text-gray-300">568.18</b>.
+              Example: base <b className="text-gray-300">100,000</b>, month with
+              22 working days × 8 hours = <b className="text-gray-300">176</b>{" "}
+              hours &rarr; hourly <b className="text-gray-300">568.18</b>.
               <br />
-              Someone <b className="text-gray-300">30 minutes</b> late is charged
-              deduction = (30/60) × 568.18 ={" "}
+              Someone <b className="text-gray-300">30 minutes</b> late is
+              charged deduction = (30/60) × 568.18 ={" "}
               <b className="text-white">284.09</b> — and{" "}
               <b className="text-gray-300">2 minutes</b> late only{" "}
               <b className="text-white">18.94</b>.
               <br />
               <br />
-              Grace-period minutes are <b className="text-gray-300">
-                not
-              </b>{" "}
+              Grace-period minutes are <b className="text-gray-300">not</b>{" "}
               charged. With a 15-minute grace in Settings, someone 20 minutes
-              late is only charged for{" "}
-              <b className="text-gray-300">5</b> minutes — a grace period
-              means exactly that those minutes are forgiven.
+              late is only charged for <b className="text-gray-300">5</b>{" "}
+              minutes — a grace period means exactly that those minutes are
+              forgiven.
               <br />
               <br />
-              The same hourly rate applies to overtime and short hours — an
-              hour is worth the same in all three places.
+              The same hourly rate applies to overtime and short hours — an hour
+              is worth the same in all three places.
             </p>
           )}
         </div>
@@ -1325,11 +1348,10 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
           </div>
 
           <p className="text-gray-500 text-xs mt-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-            This is <b className="text-gray-300">different from unpaid leave</b>.
-            With unpaid leave the person files a request and gets approval —
+            This is <b className="text-gray-300">different from unpaid leave</b>
+            . With unpaid leave the person files a request and gets approval —
             here they are simply absent without notice.
-            <br />
-            A day with neither attendance nor approved leave counts as an
+            <br />A day with neither attendance nor approved leave counts as an
             absence. If payroll runs mid-month, future days are not counted —
             the count stops at today.
           </p>
@@ -1389,15 +1411,12 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
 
           {Number(form.tax_percentage) > 0 && (
             <p className="text-gray-500 text-xs mt-3 bg-white/[0.02] border border-white/[0.06] rounded-lg p-3">
-              Example: on a gross of <b className="text-gray-300">200,000</b>, tax ={" "}
-              (200,000 − {compact(form.tax_threshold)}) ×{" "}
+              Example: on a gross of <b className="text-gray-300">200,000</b>,
+              tax = (200,000 − {compact(form.tax_threshold)}) ×{" "}
               {form.tax_percentage}% ={" "}
               <b className="text-white">
                 {compact(
-                  Math.max(
-                    0,
-                    200000 - (Number(form.tax_threshold) || 0),
-                  ) *
+                  Math.max(0, 200000 - (Number(form.tax_threshold) || 0)) *
                     ((Number(form.tax_percentage) || 0) / 100),
                 )}
               </b>
@@ -1413,7 +1432,12 @@ function PolicyForm({ policy, jsonHeaders, onSaved, setError, setNotice }) {
    Branding
    ══════════════════════════════════════════ */
 function BrandingForm({
-  branding, authHeaders, jsonHeaders, onSaved, setError, setNotice,
+  branding,
+  authHeaders,
+  jsonHeaders,
+  onSaved,
+  setError,
+  setNotice,
 }) {
   const [form, setForm] = useState(() => ({
     primary_color: "#05DC7F",
@@ -1534,8 +1558,8 @@ function BrandingForm({
             </label>
           </div>
           <p className="text-gray-600 text-[11px] mt-2">
-            PNG or JPG. Stored in the DB, not on disk — so it travels with
-            the backup.
+            PNG or JPG. Stored in the DB, not on disk — so it travels with the
+            backup.
           </p>
         </div>
 
@@ -1598,7 +1622,6 @@ function BrandingForm({
   );
 }
 
-
 /* ══════════════════════════════════════════
    Extras — that month's one-off items
    ══════════════════════════════════════════ */
@@ -1616,20 +1639,30 @@ const ADJ_KINDS = [
 ];
 
 function AdjustmentsPanel({
-  period, setPeriod, structures, authHeaders, jsonHeaders, setError, setNotice,
+  period,
+  setPeriod,
+  structures,
+  authHeaders,
+  jsonHeaders,
+  setError,
+  setNotice,
 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    employee_id: "", kind: "incentive", amount: "", note: "",
+    employee_id: "",
+    kind: "incentive",
+    amount: "",
+    note: "",
   });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API}/payroll/adjustments?period=${period}`, { headers: authHeaders });
+      const res = await fetch(`${API}/payroll/adjustments?period=${period}`, {
+        headers: authHeaders,
+      });
       const data = await res.json();
       if (res.ok) setRows(data.adjustments || []);
     } catch {
@@ -1877,15 +1910,23 @@ function AdjustmentsPanel({
    Loans
    ══════════════════════════════════════════ */
 function LoansPanel({
-  structures, authHeaders, jsonHeaders, setError, setNotice,
+  structures,
+  authHeaders,
+  jsonHeaders,
+  setError,
+  setNotice,
 }) {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    employee_id: "", title: "", principal: "", installment: "",
-    start_period: "", note: "",
+    employee_id: "",
+    title: "",
+    principal: "",
+    installment: "",
+    start_period: "",
+    note: "",
   });
 
   const load = useCallback(async () => {
@@ -1926,8 +1967,12 @@ function LoansPanel({
         setNotice(data.message);
         setOpen(false);
         setForm({
-          employee_id: "", title: "", principal: "", installment: "",
-          start_period: "", note: "",
+          employee_id: "",
+          title: "",
+          principal: "",
+          installment: "",
+          start_period: "",
+          note: "",
         });
         await load();
       }
@@ -1969,7 +2014,9 @@ function LoansPanel({
 
   const LOAN_TONE = { active: "info", cleared: "ok", cancelled: "muted" };
   const LOAN_LABEL = {
-    active: "Active", cleared: "Repaid", cancelled: "Closed",
+    active: "Active",
+    cleared: "Repaid",
+    cancelled: "Closed",
   };
 
   return (
