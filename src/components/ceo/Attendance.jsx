@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useCallback, useMemo } from "react";
 // One icon set across the whole system — two CEO tabs used to use Font
 // Awesome while everything else used Lucide. FA icons are filled, Lucide
@@ -41,7 +42,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // ──────────────────────────────────────────
 // The SERVER decides what "today" is

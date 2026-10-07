@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import {
   FaCalendarAlt,
@@ -37,7 +38,7 @@ export default function EmployeeInterviewsTab() {
     setLoading(true);
     try {
       const res = await fetch(
-        "http://127.0.0.1:8000/recruitment/my-interviews",
+        `${API_URL}/recruitment/my-interviews`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -54,7 +55,7 @@ export default function EmployeeInterviewsTab() {
   const handleDownloadCV = async (interview) => {
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/download-cv/${interview.application_id}`,
+        `${API_URL}/recruitment/download-cv/${interview.application_id}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const blob = await res.blob();
@@ -127,7 +128,7 @@ export default function EmployeeInterviewsTab() {
       form.append("communication_score", communicationScore);
       form.append("notes", notes);
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/interviews/${selectedInterview.interview_id}/feedback`,
+        `${API_URL}/recruitment/interviews/${selectedInterview.interview_id}/feedback`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },

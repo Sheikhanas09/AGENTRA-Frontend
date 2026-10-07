@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react"; // ← add
 import { FaBriefcase, FaCheck, FaTimes } from "react-icons/fa";
 
@@ -19,16 +20,16 @@ export default function DashboardHome() {
         // Call all three APIs together
         const [activeRes, pendingRes, inactiveRes, rejectedRes] =
           await Promise.all([
-            fetch("http://127.0.0.1:8000/admin/approved-ceos", {
+            fetch(`${API_URL}/admin/approved-ceos`, {
               headers: { Authorization: `Bearer ${token}` },
             }),
-            fetch("http://127.0.0.1:8000/admin/pending-ceos", {
+            fetch(`${API_URL}/admin/pending-ceos`, {
               headers: { Authorization: `Bearer ${token}` },
             }),
-            fetch("http://127.0.0.1:8000/admin/inactive-ceos", {
+            fetch(`${API_URL}/admin/inactive-ceos`, {
               headers: { Authorization: `Bearer ${token}` },
             }),
-            fetch("http://127.0.0.1:8000/admin/rejected-ceos", {
+            fetch(`${API_URL}/admin/rejected-ceos`, {
               headers: { Authorization: `Bearer ${token}` },
             }),
           ]);

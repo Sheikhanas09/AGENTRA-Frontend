@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Inbox,
@@ -23,7 +24,7 @@ import {
   TableSkeleton,
 } from "../ui/kit";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // What kind of thing was asked for. The icon carries most of the meaning
 // in a long list, so each kind gets its own.

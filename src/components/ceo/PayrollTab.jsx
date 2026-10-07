@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Wallet,
@@ -38,7 +39,7 @@ import {
   Th,
 } from "../ui/kit";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // ──────────────────────────────────────────
 // One way to display money

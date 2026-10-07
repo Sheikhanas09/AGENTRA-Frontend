@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import {
   FaTimes,
@@ -42,7 +43,7 @@ export default function Hiring() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/recruitment/jobs", {
+        const res = await fetch(`${API_URL}/recruitment/jobs`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -59,7 +60,7 @@ export default function Hiring() {
     setRankedList([]);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/ranked-candidates/${jobId}`,
+        `${API_URL}/recruitment/ranked-candidates/${jobId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();
@@ -84,7 +85,7 @@ export default function Hiring() {
     setHiringLoading(candidate.application_id);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/hire/${candidate.application_id}`,
+        `${API_URL}/recruitment/hire/${candidate.application_id}`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();
@@ -112,7 +113,7 @@ export default function Hiring() {
     setRejectLoading(candidate.application_id);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/reject/${candidate.application_id}`,
+        `${API_URL}/recruitment/reject/${candidate.application_id}`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();

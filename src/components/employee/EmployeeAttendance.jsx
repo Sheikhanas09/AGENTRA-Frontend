@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Clock,
@@ -26,7 +27,7 @@ import {
   LAST_GOOD_MAX_AGE_MS,
 } from "../../utils/geo";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // Make the work date readable (avoiding a UTC parse)
 const prettyWorkDate = (d) => {

@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useCallback, useMemo } from "react";
 // One icon set across the whole system — this file used to be on Font
 // Awesome while everything else was on Lucide
@@ -32,7 +33,7 @@ import {
   Select,
 } from "../ui/kit";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 const LEAVE_TYPES = ["annual", "casual", "sick", "unpaid", "emergency"];
 

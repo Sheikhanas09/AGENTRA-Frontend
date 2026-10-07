@@ -34,6 +34,7 @@
 
 "use client";
 
+import { API_URL } from "../../config";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -47,7 +48,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 const METHOD_LABEL = {
   bank_transfer: "Transfer",

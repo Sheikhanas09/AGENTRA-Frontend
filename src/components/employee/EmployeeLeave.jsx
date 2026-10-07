@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   CalendarDays,
@@ -26,7 +27,7 @@ import {
   TableSkeleton,
 } from "../ui/kit";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // Backend limit — both sides must agree (leave.py: MIN_REASON_LENGTH)
 const MIN_REASON = 5;

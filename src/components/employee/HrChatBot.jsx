@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   BotMessageSquare,
@@ -13,7 +14,7 @@ import {
   CornerDownLeft,
 } from "lucide-react";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // The first thing an employee sees. It says what this is for — nothing
 // about how it works, because that is not their problem.

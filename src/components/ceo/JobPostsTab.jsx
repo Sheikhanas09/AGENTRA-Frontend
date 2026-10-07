@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import { FaEye, FaTrash } from "react-icons/fa";
 
@@ -14,7 +15,7 @@ export default function JobPostsTab({ setSelectedJob }) {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/recruitment/jobs", {
+      const response = await fetch(`${API_URL}/recruitment/jobs`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -34,7 +35,7 @@ export default function JobPostsTab({ setSelectedJob }) {
     if (!window.confirm("Are you sure? This job will be permanently deleted!"))
       return;
     try {
-      await fetch(`http://127.0.0.1:8000/recruitment/jobs/${id}`, {
+      await fetch(`${API_URL}/recruitment/jobs/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

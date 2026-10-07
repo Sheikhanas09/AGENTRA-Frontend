@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useCallback } from "react";
 import WhatsAppLink from "./WhatsAppLink";
 import {
@@ -161,7 +162,7 @@ export default function Settings() {
 
   const loadIntegration = useCallback(async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/integrations/status", {
+      const res = await fetch(`${API_URL}/integrations/status`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       if (res.ok) setIntegration(await res.json());
@@ -182,7 +183,7 @@ export default function Settings() {
     setIntegrationBusy(true);
     try {
       const res = await fetch(
-        "http://127.0.0.1:8000/integrations/google/connect",
+        `${API_URL}/integrations/google/connect`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -213,7 +214,7 @@ export default function Settings() {
       return;
     setIntegrationBusy(true);
     try {
-      await fetch("http://127.0.0.1:8000/integrations/google", {
+      await fetch(`${API_URL}/integrations/google`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
@@ -245,7 +246,7 @@ export default function Settings() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/ceo/profile", {
+        const res = await fetch(`${API_URL}/ceo/profile`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -262,7 +263,7 @@ export default function Settings() {
       // ──── Office Location fetch ────
       try {
         const res = await fetch(
-          "http://127.0.0.1:8000/settings/office-location",
+          `${API_URL}/settings/office-location`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -293,7 +294,7 @@ export default function Settings() {
   // fields itself — at which point the form has to be reloaded
   const loadWorkPolicy = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/settings/work-policy", {
+      const res = await fetch(`${API_URL}/settings/work-policy`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -309,7 +310,7 @@ export default function Settings() {
   // the result comes back alongside the active policy.
   const loadActivePolicyResult = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/settings/policy/active", {
+      const res = await fetch(`${API_URL}/settings/policy/active`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -347,7 +348,7 @@ export default function Settings() {
     setExtracting(true);
     try {
       const res = await fetch(
-        "http://127.0.0.1:8000/settings/work-policy/extract",
+        `${API_URL}/settings/work-policy/extract`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();
@@ -386,7 +387,7 @@ export default function Settings() {
   // ──── The list of uploaded policies ────
   const loadPolicyList = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/settings/policy/list", {
+      const res = await fetch(`${API_URL}/settings/policy/list`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -411,7 +412,7 @@ export default function Settings() {
     setSuccess("");
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/settings/policy/${policy.id}`,
+        `${API_URL}/settings/policy/${policy.id}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -462,7 +463,7 @@ export default function Settings() {
     setSuccess("");
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/ceo/profile", {
+      const res = await fetch(`${API_URL}/ceo/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -512,7 +513,7 @@ export default function Settings() {
 
     try {
       const res = await fetch(
-        "http://127.0.0.1:8000/settings/office-location",
+        `${API_URL}/settings/office-location`,
         {
           method: "POST",
           headers: {
@@ -572,7 +573,7 @@ export default function Settings() {
     setSuccess("");
     setSavingPolicy(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/settings/work-policy", {
+      const res = await fetch(`${API_URL}/settings/work-policy`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -607,7 +608,7 @@ export default function Settings() {
     form.append("policy_label", policyLabel);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/settings/policy/upload", {
+      const res = await fetch(`${API_URL}/settings/policy/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -635,7 +636,7 @@ export default function Settings() {
     const poll = setInterval(async () => {
       try {
         const r = await fetch(
-          `http://127.0.0.1:8000/settings/policy/status/${policyId}`,
+          `${API_URL}/settings/policy/status/${policyId}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         const s = await r.json();
@@ -716,7 +717,7 @@ export default function Settings() {
 
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/settings/policy/${policy.id}/activate`,
+        `${API_URL}/settings/policy/${policy.id}/activate`,
         { method: "POST", headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();

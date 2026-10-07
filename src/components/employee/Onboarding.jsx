@@ -39,6 +39,7 @@
 
 "use client";
 
+import { API_URL } from "../../config";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -54,7 +55,7 @@ import {
 import logo from "../../images/logo.png";
 import { ACCENT } from "../ui/tokens";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // ⚠ Wohi hisab jo `app/schemas/bank.py` mein hai (ISO 13616, mod-97).
 // Ek hindsa badal jaye ya do hindse aapas mein badal jayein — dono

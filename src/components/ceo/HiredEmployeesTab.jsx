@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import {
   FaUserTie,
@@ -46,7 +47,7 @@ export default function HiredEmployeesTab() {
     setAllLoading(true);
     try {
       const res = await fetch(
-        "http://127.0.0.1:8000/recruitment/all-employees",
+        `${API_URL}/recruitment/all-employees`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -63,7 +64,7 @@ export default function HiredEmployeesTab() {
     setHiredLoading(true);
     try {
       const res = await fetch(
-        "http://127.0.0.1:8000/recruitment/hired-employees",
+        `${API_URL}/recruitment/hired-employees`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -84,7 +85,7 @@ export default function HiredEmployeesTab() {
     setFireLoading(emp.id);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/fire-employee/${emp.id}`,
+        `${API_URL}/recruitment/fire-employee/${emp.id}`,
         { method: "PUT", headers: { Authorization: `Bearer ${token}` } },
       );
       if (res.ok) {

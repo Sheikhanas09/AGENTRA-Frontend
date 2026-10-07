@@ -1,3 +1,4 @@
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../../images/logo.png";
@@ -15,7 +16,7 @@ export default function JobPortal() {
     const fetchJobs = async () => {
       try {
         const response = await fetch(
-          "http://127.0.0.1:8000/recruitment/public/jobs",
+          `${API_URL}/recruitment/public/jobs`,
         );
         const data = await response.json();
         setJobs(data.jobs || []);

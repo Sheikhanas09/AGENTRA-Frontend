@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState } from "react";
 
 export default function CreateJobTab() {
@@ -34,7 +35,7 @@ export default function CreateJobTab() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/recruitment/jobs/create",
+        `${API_URL}/recruitment/jobs/create`,
         {
           method: "POST",
           headers: {

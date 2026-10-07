@@ -23,10 +23,11 @@
 // jate waqt ek jagah badal kar doosri bhool jana theek us qism ki
 // ghalti hai jo yeh project pehle bhugat chuka hai.
 
+import { API_URL } from "../../config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaWhatsapp, FaCopy, FaCheck } from "react-icons/fa";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // Backend ke `phone_problem` wali hi shart. Client par isliye ke CEO ko
 // jawab foran mile, server par isliye ke client par lagi hui koi shart

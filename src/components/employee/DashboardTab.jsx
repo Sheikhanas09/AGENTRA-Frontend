@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   CheckCircle2,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { formatMinutes } from "../../utils/time";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // ──── Money — same shape as EmployeePayroll.jsx ────
 const money = (n) =>

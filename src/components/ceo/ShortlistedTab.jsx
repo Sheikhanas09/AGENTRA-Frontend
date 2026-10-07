@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import {
   FaFileAlt,
@@ -34,7 +35,7 @@ export default function ShortlistedTab() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/recruitment/jobs", {
+        const res = await fetch(`${API_URL}/recruitment/jobs`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -51,7 +52,7 @@ export default function ShortlistedTab() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/recruitment/employees", {
+        const res = await fetch(`${API_URL}/recruitment/employees`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -69,7 +70,7 @@ export default function ShortlistedTab() {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/recruitment/applications/${jobId}`,
+        `${API_URL}/recruitment/applications/${jobId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       const data = await res.json();
@@ -161,7 +162,7 @@ export default function ShortlistedTab() {
       if (heldBy[1]) form.append("interviewer_2_email", heldBy[1].email);
 
       const res = await fetch(
-        "http://127.0.0.1:8000/recruitment/schedule-interview",
+        `${API_URL}/recruitment/schedule-interview`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -347,7 +348,7 @@ export default function ShortlistedTab() {
                     onClick={async () => {
                       const token = localStorage.getItem("token");
                       const res = await fetch(
-                        `http://127.0.0.1:8000/recruitment/download-cv/${c.application_id}`,
+                        `${API_URL}/recruitment/download-cv/${c.application_id}`,
                         { headers: { Authorization: `Bearer ${token}` } },
                       );
                       const blob = await res.blob();

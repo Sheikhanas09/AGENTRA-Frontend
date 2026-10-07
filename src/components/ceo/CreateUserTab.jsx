@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useEffect, useState } from "react";
 import {
   FaUserPlus,
@@ -57,7 +58,7 @@ export default function CreateUser() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    fetch("http://127.0.0.1:8000/ceo/employees", {
+    fetch(`${API_URL}/ceo/employees`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : null))
@@ -104,7 +105,7 @@ export default function CreateUser() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/ceo/create-employee",
+        `${API_URL}/ceo/create-employee`,
         {
           method: "POST",
           headers: {
@@ -145,7 +146,7 @@ export default function CreateUser() {
       if (base > 0) {
         try {
           const sres = await fetch(
-            "http://127.0.0.1:8000/payroll/salary-structure",
+            `${API_URL}/payroll/salary-structure`,
             {
               method: "POST",
               headers: {

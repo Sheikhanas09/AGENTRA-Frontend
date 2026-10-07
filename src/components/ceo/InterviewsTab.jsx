@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 import {
   FaCalendarAlt,
@@ -134,7 +135,7 @@ export default function InterviewsTab() {
   const fetchInterviews = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/recruitment/interviews", {
+      const res = await fetch(`${API_URL}/recruitment/interviews`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

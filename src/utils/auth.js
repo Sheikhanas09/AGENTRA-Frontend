@@ -1,3 +1,4 @@
+import { API_URL } from "../config";
 /**
  * Logout — ek jagah, teenon dashboards ke liye
  * ────────────────────────────────────────────
@@ -68,7 +69,7 @@
  *     safha dikh jana khud ek bad-soorti hai.
  */
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 export function logout() {
   // ══════════════════════════════════════════════

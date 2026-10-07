@@ -1,3 +1,4 @@
+import { API_URL } from "../../config";
 import { useState, useEffect } from "react";
 
 export default function AllCompanies() {
@@ -14,11 +15,11 @@ export default function AllCompanies() {
     setLoading(true);
     try {
       let url = "";
-      if (tab === "Active") url = "http://127.0.0.1:8000/admin/approved-ceos";
+      if (tab === "Active") url = `${API_URL}/admin/approved-ceos`;
       else if (tab === "Inactive")
-        url = "http://127.0.0.1:8000/admin/inactive-ceos";
+        url = `${API_URL}/admin/inactive-ceos`;
       else if (tab === "Requests")
-        url = "http://127.0.0.1:8000/admin/pending-ceos";
+        url = `${API_URL}/admin/pending-ceos`;
 
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -33,7 +34,7 @@ export default function AllCompanies() {
 
   const fetchPendingCount = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/admin/pending-ceos", {
+      const response = await fetch(`${API_URL}/admin/pending-ceos`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -50,7 +51,7 @@ export default function AllCompanies() {
 
   const handleApprove = async (id) => {
     try {
-      await fetch(`http://127.0.0.1:8000/admin/approve-ceo/${id}`, {
+      await fetch(`${API_URL}/admin/approve-ceo/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -63,7 +64,7 @@ export default function AllCompanies() {
 
   const handleReject = async (id) => {
     try {
-      await fetch(`http://127.0.0.1:8000/admin/reject-ceo/${id}`, {
+      await fetch(`${API_URL}/admin/reject-ceo/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -76,7 +77,7 @@ export default function AllCompanies() {
 
   const handleDeactivate = async (id) => {
     try {
-      await fetch(`http://127.0.0.1:8000/admin/deactivate-ceo/${id}`, {
+      await fetch(`${API_URL}/admin/deactivate-ceo/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -88,7 +89,7 @@ export default function AllCompanies() {
 
   const handleActivate = async (id) => {
     try {
-      await fetch(`http://127.0.0.1:8000/admin/activate-ceo/${id}`, {
+      await fetch(`${API_URL}/admin/activate-ceo/${id}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -127,7 +128,7 @@ export default function AllCompanies() {
     )
       return;
     try {
-      await fetch(`http://127.0.0.1:8000/admin/delete-ceo/${id}`, {
+      await fetch(`${API_URL}/admin/delete-ceo/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

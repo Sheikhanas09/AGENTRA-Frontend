@@ -1,3 +1,4 @@
+import { API_URL } from "../../config";
 import { useState } from "react";
 import bgGlow from "../../images/bg.png";
 import logo from "../../images/logo.png";
@@ -15,7 +16,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

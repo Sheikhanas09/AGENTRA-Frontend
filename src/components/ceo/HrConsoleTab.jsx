@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "../../config";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Users,
@@ -29,7 +30,7 @@ import {
   TableSkeleton,
 } from "../ui/kit";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 // Things a CEO actually asks, so the first use is not a blank box.
 const STARTERS = [

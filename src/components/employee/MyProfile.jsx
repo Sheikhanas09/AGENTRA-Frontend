@@ -27,6 +27,7 @@
 
 "use client";
 
+import { API_URL } from "../../config";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -40,7 +41,7 @@ import {
   X,
 } from "lucide-react";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 const METHOD_LABEL = {
   bank_transfer: "Bank transfer",

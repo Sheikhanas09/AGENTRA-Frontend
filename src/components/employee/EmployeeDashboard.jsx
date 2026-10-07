@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "../../config";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../layout/Layout";
@@ -23,7 +24,7 @@ import {
   FaIdBadge,
 } from "react-icons/fa";
 
-const API = "http://127.0.0.1:8000";
+const API = API_URL;
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
