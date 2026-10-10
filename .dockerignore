@@ -1,0 +1,18 @@
+# ══════════════════════════════════════════════
+# Frontend image mein kya NAHI jayega
+# ══════════════════════════════════════════════
+# node_modules sab se ahem: laptop ke packages WINDOWS ke liye install
+# hain (tailwind oxide, rollup ki binary) — Linux mein nahi chalte.
+# Container `npm ci` se Linux wale khud lagata hai.
+# Jaan-boojh kar ANDAR: nginx.conf (Dockerfile ka doosra marhala).
+
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.git/
+.vscode/
+*.log
+Dockerfile
+.dockerignore
