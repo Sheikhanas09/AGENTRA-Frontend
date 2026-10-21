@@ -26,6 +26,19 @@ import {
 
 const API = API_URL;
 
+// Requests are stamped in UTC (`datetime.utcnow`). Shown as they came,
+// the CEO saw every request five hours older than it was. PKT has no
+// daylight saving, so +5h is exact whatever the browser is set to.
+const pktStamp = (s) => {
+  if (!s) return "";
+  const t = new Date(s.replace(" ", "T") + "Z");
+  if (Number.isNaN(t.getTime())) return s;
+  return new Date(t.getTime() + 5 * 3600 * 1000)
+    .toISOString()
+    .replace("T", " ")
+    .slice(0, 16);
+};
+
 // What kind of thing was asked for. The icon carries most of the meaning
 // in a long list, so each kind gets its own.
 const KINDS = {
@@ -271,7 +284,7 @@ export default function RequestsTab() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock size={11} />
-                          {r.created_at?.replace("T", " ").slice(0, 16)}
+                          {pktStamp(r.created_at)}
                         </span>
                       </p>
 
